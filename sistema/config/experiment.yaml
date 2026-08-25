@@ -1,0 +1,31 @@
+# Configuração do experimento (orquestrador fixo, rede bem conectada).
+#
+# mode: "simulation" -> nós recebem o gabarito e fabricam o comportamento do
+#                       perfil (valida comunicação e reputação sem modelo).
+#       "real"       -> nós NÃO recebem o gabarito; nós honestos executam o LLM.
+mode: simulation
+
+# Fonte das tarefas: "sample" (amostra offline embutida) ou "gsm8k" (download).
+dataset: sample
+num_tasks: 10          # limita o nº de tarefas carregadas (null = todas)
+split: test            # usado apenas quando dataset = gsm8k
+
+rounds: 20             # nº de rodadas (null = uma por tarefa)
+alpha: 0.3             # taxa de aprendizado da reputação (EMA)
+timeout_s: 10          # tempo máximo de espera por nó (detecta instabilidade)
+output_dir: sistema/results/experimento
+
+# Cenário inicial combinado: 4 nós, rede bem conectada, 25% maliciosos.
+nodes:
+  - id: node-0
+    url: http://node-0:8000
+    profile: honest
+  - id: node-1
+    url: http://node-1:8000
+    profile: honest
+  - id: node-2
+    url: http://node-2:8000
+    profile: honest
+  - id: node-3
+    url: http://node-3:8000
+    profile: malicious

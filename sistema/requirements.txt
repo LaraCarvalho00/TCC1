@@ -1,0 +1,4 @@
+# Conjunto para execução local (orquestrador + nó, modo mock).
+# Para inferência real com LLM, instale também requirements-model.txt.
+-r requirements-node.txt
+-r requirements-orchestrator.txt

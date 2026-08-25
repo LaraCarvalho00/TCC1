@@ -1,0 +1,6 @@
+# Dependências para inferência real com LLM e download do GSM8K.
+# Necessárias apenas para INFERENCE_MODE=model e dataset=gsm8k.
+transformers>=4.44
+torch>=2.2
+datasets>=2.20
+accelerate>=0.33

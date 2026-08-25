@@ -1,0 +1,52 @@
+[
+  {
+    "id": "sample-0",
+    "question": "Ana has 3 boxes with 12 apples in each box. She gives away 10 apples. How many apples does she have left?",
+    "answer": 26
+  },
+  {
+    "id": "sample-1",
+    "question": "A book has 240 pages. Marco reads 30 pages every day. How many days does he need to finish the book?",
+    "answer": 8
+  },
+  {
+    "id": "sample-2",
+    "question": "A store sells pens for 5 reais each. Joao buys 7 pens and pays with a 50 reais note. How much change does he receive?",
+    "answer": 15
+  },
+  {
+    "id": "sample-3",
+    "question": "There are 4 teams with 6 players each. On game day, 3 players are absent. How many players are present in total?",
+    "answer": 21
+  },
+  {
+    "id": "sample-4",
+    "question": "A water tank holds 500 liters. It is filled at a rate of 25 liters per minute. How many minutes does it take to fill the tank?",
+    "answer": 20
+  },
+  {
+    "id": "sample-5",
+    "question": "Lucas saves 15 reais every week. After 8 weeks he spends 40 reais on a gift. How much money does he have left?",
+    "answer": 80
+  },
+  {
+    "id": "sample-6",
+    "question": "A recipe uses 3 eggs to make one cake. How many eggs are needed to make 9 cakes?",
+    "answer": 27
+  },
+  {
+    "id": "sample-7",
+    "question": "A train travels at 60 km/h for 3 hours and then covers another 40 km. What is the total distance traveled?",
+    "answer": 220
+  },
+  {
+    "id": "sample-8",
+    "question": "Maria has 100 reais. She buys 4 notebooks that cost 12 reais each. How much money does she have left?",
+    "answer": 52
+  },
+  {
+    "id": "sample-9",
+    "question": "A class has 28 students. Three quarters of them passed the exam. How many students passed?",
+    "answer": 21
+  }
+]

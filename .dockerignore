@@ -1,0 +1,10 @@
+.git/
+**/__pycache__/
+**/*.pyc
+sistema/results/
+Apresentações/
+ArtigosSelecionados/
+Protótipos/
+*.pdf
+*.md
+!README.md

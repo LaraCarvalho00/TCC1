@@ -1,0 +1,19 @@
+# Resultados de execução e artefatos gerados
+sistema/results/
+*.generated.yml
+*.generated.yaml
+
+# Caches Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Modelos e datasets baixados
+*.safetensors
+*.bin
+.cache/
