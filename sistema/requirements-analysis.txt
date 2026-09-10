@@ -1,0 +1,4 @@
+# Dependências adicionais para análise e geração de gráficos (Fase 3).
+# Instale com:
+#   pip install -r sistema/requirements-analysis.txt
+matplotlib>=3.7

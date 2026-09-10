@@ -1,0 +1,274 @@
+services:
+  node-0:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-0
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '42'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-1:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-1
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '43'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-2:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-2
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '44'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-3:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-3
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '45'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-4:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-4
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '46'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-5:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-5
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '47'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-6:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-6
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '48'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-7:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-7
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '49'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-8:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-8
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '50'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-9:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-9
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '51'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-10:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-10
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '52'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-11:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-11
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '53'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-12:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-12
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '54'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-13:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-13
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '55'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-14:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-14
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '56'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-15:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-15
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '57'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-16:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-16
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '58'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-17:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-17
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '59'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-18:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-18
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '60'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  node-19:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-19
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '61'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+  orchestrator:
+    build:
+      context: .
+      dockerfile: sistema/orchestrator/Dockerfile
+    depends_on:
+    - node-0
+    - node-1
+    - node-2
+    - node-3
+    - node-4
+    - node-5
+    - node-6
+    - node-7
+    - node-8
+    - node-9
+    - node-10
+    - node-11
+    - node-12
+    - node-13
+    - node-14
+    - node-15
+    - node-16
+    - node-17
+    - node-18
+    - node-19
+    volumes:
+    - ./sistema/results:/app/sistema/results
+    command:
+    - python
+    - -m
+    - sistema.orchestrator.run
+    - --config
+    - sistema/config/experiment.20nodes.yaml
