@@ -97,32 +97,37 @@ def run_simulation(args: argparse.Namespace) -> dict:
 
     logger = MetricsLogger(output_dir, experiment_id=experiment_id, overwrite=overwrite)
 
-    # Laço de rodadas.
-    for round_index in range(args.rounds):
-        task = tasks[round_index % len(tasks)]
-        expected = normalize(task["answer"])
+    # Laço de rodadas.  Se interrompido, os CSVs incrementais (per_node.csv,
+    # rounds.csv, reputation_history.csv) já contêm todas as rodadas concluídas.
+    try:
+        for round_index in range(args.rounds):
+            task = tasks[round_index % len(tasks)]
+            expected = normalize(task["answer"])
 
-        responses: list[NodeResponse] = []
-        for node_id in node_ids:
-            answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
-            responses.append(
-                NodeResponse(
-                    node_id=node_id,
-                    task_id=task["id"],
-                    answer=normalize(answer),
-                    latency_ms=latency,
-                    profile=profiles[node_id],
+            responses: list[NodeResponse] = []
+            for node_id in node_ids:
+                answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
+                responses.append(
+                    NodeResponse(
+                        node_id=node_id,
+                        task_id=task["id"],
+                        answer=normalize(answer),
+                        latency_ms=latency,
+                        profile=profiles[node_id],
+                    )
                 )
-            )
 
-        process_round(
-            round_index=round_index,
-            task_id=task["id"],
-            expected=expected,
-            responses=responses,
-            tracker=tracker,
-            logger=logger,
-        )
+            process_round(
+                round_index=round_index,
+                task_id=task["id"],
+                expected=expected,
+                responses=responses,
+                tracker=tracker,
+                logger=logger,
+            )
+    except BaseException:
+        logger.close()
+        raise
 
     # Configuração que vai para o manifest / summary.
     run_config = {

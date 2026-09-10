@@ -15,6 +15,14 @@ Gera quatro arquivos por execução:
 
 Cada linha é identificada por ``experiment_id``, permitindo agregar múltiplos
 experimentos para análise comparativa.
+
+``per_node.csv``, ``rounds.csv`` e ``reputation_history.csv`` são gravados de
+forma **incremental**: cada linha é escrita e sincronizada em disco assim que a
+rodada correspondente termina (ver :meth:`MetricsLogger.record_node` e
+:meth:`MetricsLogger.record_round`).  Assim, se a execução for interrompida no
+meio, todas as rodadas já processadas permanecem salvas.  ``flush`` apenas
+finaliza os arquivos derivados (``summary.json``, ``manifest.json``) e fecha os
+streams abertos.
 """
 from __future__ import annotations
 
@@ -134,6 +142,23 @@ class MetricsLogger:
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
 
+        # --- Gravação incremental --------------------------------------
+        # Abrimos os três CSVs de série temporal já no início e escrevemos
+        # cada linha assim que a rodada é processada, sincronizando em disco.
+        # Assim nenhuma rodada já concluída se perde numa interrupção.
+        self._per_node_stream = _CsvStream(
+            os.path.join(output_dir, "per_node.csv"), PER_NODE_FIELDS
+        )
+        self._round_stream = _CsvStream(
+            os.path.join(output_dir, "rounds.csv"), ROUND_FIELDS
+        )
+        self._history_stream = _CsvStream(
+            os.path.join(output_dir, "reputation_history.csv"), HISTORY_FIELDS
+        )
+        # Nós cujo checkpoint 0 (reputação inicial) já foi escrito no histórico.
+        self._history_seed_written: set[str] = set()
+        self._closed = False
+
     # ------------------------------------------------------------------
     def record_node(
         self,
@@ -159,7 +184,7 @@ class MetricsLogger:
         is_tie_weighted: bool,
         is_tie_majority: bool,
     ) -> None:
-        self.per_node_rows.append({
+        row = {
             "experiment_id": self.experiment_id,
             "round_index": round_index,
             "task_id": task_id,
@@ -191,6 +216,27 @@ class MetricsLogger:
             "consensus_majority_correct": int(consensus_majority_correct),
             "is_tie_weighted": int(is_tie_weighted),
             "is_tie_majority": int(is_tie_majority),
+        }
+        self.per_node_rows.append(row)
+        self._per_node_stream.write(row)
+
+        # Série temporal de reputação, gravada rodada a rodada.
+        # checkpoint 0 = reputação inicial; checkpoint k+1 = após a rodada k.
+        if node_id not in self._history_seed_written:
+            self._history_stream.write({
+                "experiment_id": self.experiment_id,
+                "node_id": node_id,
+                "profile": profile,
+                "checkpoint": 0,
+                "reputation": round(rep_update.score_before, 6),
+            })
+            self._history_seed_written.add(node_id)
+        self._history_stream.write({
+            "experiment_id": self.experiment_id,
+            "node_id": node_id,
+            "profile": profile,
+            "checkpoint": round_index + 1,
+            "reputation": round(rep_update.score_after, 6),
         })
 
     # ------------------------------------------------------------------
@@ -213,7 +259,7 @@ class MetricsLogger:
         mean_latency = round(statistics.mean(latencies), 1) if latencies else 0.0
         absent_rate = round(n_absent / num_nodes, 4) if num_nodes else 0.0
 
-        self.round_rows.append({
+        row = {
             "experiment_id": self.experiment_id,
             "round_index": result.round_index,
             "task_id": result.task_id,
@@ -239,7 +285,9 @@ class MetricsLogger:
             "consensus_margin_majority": round(consensus_margin_majority, 6),
             "is_tie_weighted": int(is_tie_weighted),
             "is_tie_majority": int(is_tie_majority),
-        })
+        }
+        self.round_rows.append(row)
+        self._round_stream.write(row)
 
     # ------------------------------------------------------------------
     def summary(
@@ -292,17 +340,13 @@ class MetricsLogger:
         profiles: dict[str, str],
         seed: Optional[int] = None,
     ) -> dict:
-        """Persiste todos os arquivos e retorna o resumo."""
-        _write_csv(os.path.join(self.output_dir, "per_node.csv"), PER_NODE_FIELDS, self.per_node_rows)
-        _write_csv(os.path.join(self.output_dir, "rounds.csv"), ROUND_FIELDS, self.round_rows)
+        """Finaliza os arquivos derivados e retorna o resumo.
 
-        # Histórico de reputação (série temporal desnormalizada para plotar)
-        history_rows = _build_history(self.experiment_id, tracker, profiles)
-        _write_csv(
-            os.path.join(self.output_dir, "reputation_history.csv"),
-            HISTORY_FIELDS,
-            history_rows,
-        )
+        ``per_node.csv``, ``rounds.csv`` e ``reputation_history.csv`` já foram
+        gravados linha a linha durante a execução; aqui apenas fechamos os
+        streams e escrevemos ``summary.json`` / ``manifest.json``.
+        """
+        self.close()
 
         final_reps = tracker.weights()
         summ = self.summary(final_reps, profiles, tracker)
@@ -322,10 +366,58 @@ class MetricsLogger:
         )
         return summ
 
+    # ------------------------------------------------------------------
+    def close(self) -> None:
+        """Fecha os streams CSV incrementais.  Idempotente."""
+        if self._closed:
+            return
+        self._per_node_stream.close()
+        self._round_stream.close()
+        self._history_stream.close()
+        self._closed = True
+
+    def __enter__(self) -> "MetricsLogger":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
 
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------
+
+class _CsvStream:
+    """CSV gravado linha a linha, com ``flush`` + ``fsync`` a cada escrita.
+
+    Mantém o arquivo aberto durante toda a execução e sincroniza cada linha
+    em disco, de modo que uma interrupção (Ctrl+C, queda do container) não
+    perca as rodadas já processadas.
+    """
+
+    def __init__(self, path: str, fieldnames: list[str]) -> None:
+        self.path = path
+        self._fh = open(path, "w", newline="", encoding="utf-8")
+        self._writer = csv.DictWriter(self._fh, fieldnames=fieldnames)
+        self._writer.writeheader()
+        self._sync()
+
+    def write(self, row: dict) -> None:
+        self._writer.writerow(row)
+        self._sync()
+
+    def _sync(self) -> None:
+        self._fh.flush()
+        try:
+            os.fsync(self._fh.fileno())
+        except (OSError, ValueError):
+            # fsync pode não estar disponível (ex.: alguns sistemas de arquivos
+            # de rede); flush já garante a entrega ao SO.
+            pass
+
+    def close(self) -> None:
+        if not self._fh.closed:
+            self._fh.close()
 
 def _generate_id() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -333,25 +425,6 @@ def _generate_id() -> str:
 
 def _ratio(part: int, total: int) -> float:
     return round(part / total, 4) if total else 0.0
-
-
-def _build_history(
-    experiment_id: str,
-    tracker: "ReputationTracker",
-    profiles: dict[str, str],
-) -> list[dict]:
-    rows = []
-    for node_id, checkpoints in tracker.history.items():
-        profile = profiles.get(node_id, "unknown")
-        for i, rep in enumerate(checkpoints):
-            rows.append({
-                "experiment_id": experiment_id,
-                "node_id": node_id,
-                "profile": profile,
-                "checkpoint": i,   # 0 = inicial; k+1 = após rodada k
-                "reputation": round(rep, 6),
-            })
-    return rows
 
 
 def _write_manifest(
@@ -392,10 +465,3 @@ def _git_sha() -> str:
         return sha
     except Exception:
         return "unknown"
-
-
-def _write_csv(path: str, fieldnames: list[str], rows: list[dict]) -> None:
-    with open(path, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)

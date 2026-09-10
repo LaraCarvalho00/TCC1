@@ -144,26 +144,31 @@ async def run_experiment(config: dict) -> dict:
     # Em Docker o diretório de volume pode já existir; usamos overwrite=True.
     logger = MetricsLogger(output_dir, experiment_id=experiment_id, overwrite=True)
 
-    async with httpx.AsyncClient() as client:
-        await wait_for_nodes(client, nodes)
+    try:
+        async with httpx.AsyncClient() as client:
+            await wait_for_nodes(client, nodes)
 
-        for round_index in range(rounds):
-            task = tasks[round_index % len(tasks)]
-            expected = normalize(task["answer"])
+            for round_index in range(rounds):
+                task = tasks[round_index % len(tasks)]
+                expected = normalize(task["answer"])
 
-            responses: list[NodeResponse] = await asyncio.gather(
-                *(query_node(client, node, task, mode, timeout) for node in nodes)
-            )
+                responses: list[NodeResponse] = await asyncio.gather(
+                    *(query_node(client, node, task, mode, timeout) for node in nodes)
+                )
 
-            result = process_round(
-                round_index=round_index,
-                task_id=task["id"],
-                expected=expected,
-                responses=list(responses),
-                tracker=tracker,
-                logger=logger,
-            )
-            _print_round(result)
+                result = process_round(
+                    round_index=round_index,
+                    task_id=task["id"],
+                    expected=expected,
+                    responses=list(responses),
+                    tracker=tracker,
+                    logger=logger,
+                )
+                _print_round(result)
+    except BaseException:
+        # CSVs incrementais já têm todas as rodadas concluídas; fecha os streams.
+        logger.close()
+        raise
 
     summary = logger.flush(
         config,
