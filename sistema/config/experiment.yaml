@@ -15,7 +15,29 @@ alpha: 0.3             # taxa de aprendizado da reputação (EMA)
 timeout_s: 10          # tempo máximo de espera por nó (detecta instabilidade)
 output_dir: sistema/results/experimento
 
-# Cenário inicial combinado: 4 nós, rede bem conectada, 25% maliciosos.
+# ------------------------------------------------------------------
+# Mecanismo de reputação
+# Opções: ema | ema_asymmetric | beta
+# ------------------------------------------------------------------
+reputation_mechanism: ema
+# alpha_down: 0.15   # apenas para ema_asymmetric; padrão = alpha/2
+initial_reputation: 0.5
+
+# Experiment tracking
+experiment_id: null   # null = auto-gerado (timestamp)
+seed: 42
+
+# ------------------------------------------------------------------
+# Comportamento dos nós em modo simulação
+# ------------------------------------------------------------------
+honest_p_correct: 0.9        # probabilidade de acerto de um nó honesto
+unstable_p_drop: 0.3         # probabilidade de o nó instável descartar
+unstable_p_correct: 0.5      # probabilidade de acerto quando responde (instável)
+# collusion_value: null      # se definido, maliciosos respondem este valor
+
+# ------------------------------------------------------------------
+# Topologia: cenário inicial (4 nós, 25% maliciosos)
+# ------------------------------------------------------------------
 nodes:
   - id: node-0
     url: http://node-0:8000

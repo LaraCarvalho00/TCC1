@@ -33,9 +33,19 @@ INFERENCE_MODE = os.getenv("INFERENCE_MODE", "mock")
 MODEL_NAME = os.getenv("MODEL_NAME", "HuggingFaceTB/SmolLM3-3B")
 SEED = int(os.getenv("SEED", "0"))
 MAX_SLEEP_MS = int(os.getenv("MAX_SLEEP_MS", "3000"))
-_MALICIOUS_VALUE = os.getenv("MALICIOUS_VALUE")
 
-_config = behavior.BehaviorConfig()
+# Parâmetros de comportamento propagados via environment (gen_compose.py).
+_MALICIOUS_VALUE = os.getenv("MALICIOUS_VALUE")
+_HONEST_P_CORRECT = os.getenv("HONEST_P_CORRECT")
+_UNSTABLE_P_DROP = os.getenv("UNSTABLE_P_DROP")
+_UNSTABLE_P_CORRECT = os.getenv("UNSTABLE_P_CORRECT")
+
+_config = behavior.BehaviorConfig(
+    malicious_collusion_value=int(_MALICIOUS_VALUE) if _MALICIOUS_VALUE else None,
+    honest_p_correct=float(_HONEST_P_CORRECT) if _HONEST_P_CORRECT else 0.9,
+    unstable_p_drop=float(_UNSTABLE_P_DROP) if _UNSTABLE_P_DROP else 0.3,
+    unstable_p_correct=float(_UNSTABLE_P_CORRECT) if _UNSTABLE_P_CORRECT else 0.5,
+)
 _rng = random.Random(SEED)
 _mock_backend = MockBackend(_config, _rng)
 _model_backend: Optional[ModelBackend] = None
@@ -114,8 +124,8 @@ def _get_model_backend() -> ModelBackend:
 
 
 def _malicious_answer() -> Answer:
-    if _MALICIOUS_VALUE is not None:
-        return int(_MALICIOUS_VALUE)
+    if _config.malicious_collusion_value is not None:
+        return _config.malicious_collusion_value
     return _rng.randint(0, 100)
 
 

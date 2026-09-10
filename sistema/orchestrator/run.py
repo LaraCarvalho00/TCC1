@@ -5,13 +5,16 @@ assíncrona (coleta concorrente via ``httpx``), agregar as respostas por consens
 (ponderado por reputação e por maioria simples), avaliar contra o gabarito,
 atualizar a reputação dinâmica e registrar as métricas.
 
-Topologia: estrela (o orquestrador possui um canal para cada nó), correspondendo
-à decisão de começar com um orquestrador fixo em uma rede bem conectada.
+O laço de rodada é implementado em :mod:`sistema.core.engine` e compartilhado
+com a simulação local, garantindo que os dois caminhos de execução sejam
+estritamente comparáveis (mesma lógica de consenso, atualização e logging).
 
-Uso:
+Topologia: estrela (o orquestrador possui um canal para cada nó).
+
+Uso::
+
     python -m sistema.orchestrator.run --config sistema/config/experiment.yaml
 """
-
 from __future__ import annotations
 
 import argparse
@@ -24,13 +27,17 @@ import yaml
 
 from ..core import dataset as dataset_module
 from ..core.answer import normalize
-from ..core.consensus import majority_consensus, weighted_consensus
+from ..core.engine import process_round
 from ..core.metrics import MetricsLogger
-from ..core.reputation import ReputationTracker
-from ..core.schemas import NodeResponse, RoundResult
+from ..core.reputation import MECHANISMS, ReputationTracker
+from ..core.schemas import NodeResponse
 
 _DEFAULT_CONFIG = os.path.join(os.path.dirname(__file__), "..", "config", "experiment.yaml")
 
+
+# ---------------------------------------------------------------------------
+# Config e dataset
+# ---------------------------------------------------------------------------
 
 def load_config(path: str) -> dict[str, Any]:
     with open(path, encoding="utf-8") as handle:
@@ -44,6 +51,10 @@ def load_tasks(config: dict) -> list[dict]:
         return dataset_module.load_gsm8k(split=config.get("split", "test"), limit=limit)
     return dataset_module.load_sample(limit=limit)
 
+
+# ---------------------------------------------------------------------------
+# Coleta de respostas via HTTP
+# ---------------------------------------------------------------------------
 
 async def query_node(
     client: httpx.AsyncClient,
@@ -97,6 +108,10 @@ async def wait_for_nodes(
             await asyncio.sleep(delay)
 
 
+# ---------------------------------------------------------------------------
+# Laço principal
+# ---------------------------------------------------------------------------
+
 async def run_experiment(config: dict) -> dict:
     nodes: list[dict] = config["nodes"]
     node_ids = [node["id"] for node in nodes]
@@ -111,8 +126,23 @@ async def run_experiment(config: dict) -> dict:
     timeout = float(config.get("timeout_s", 10))
     output_dir = config.get("output_dir", os.path.join("sistema", "results", "experimento"))
 
-    tracker = ReputationTracker(node_ids, alpha=float(config.get("alpha", 0.3)))
-    logger = MetricsLogger(output_dir)
+    mechanism = config.get("reputation_mechanism", "ema")
+    if mechanism not in MECHANISMS:
+        raise ValueError(f"reputation_mechanism deve ser um de {MECHANISMS!r}.")
+    alpha_down = config.get("alpha_down", None)
+    initial = float(config.get("initial_reputation", 0.5))
+
+    tracker = ReputationTracker(
+        node_ids,
+        alpha=float(config.get("alpha", 0.3)),
+        initial=initial,
+        mechanism=mechanism,
+        alpha_down=alpha_down,
+    )
+
+    experiment_id = config.get("experiment_id", None)
+    # Em Docker o diretório de volume pode já existir; usamos overwrite=True.
+    logger = MetricsLogger(output_dir, experiment_id=experiment_id, overwrite=True)
 
     async with httpx.AsyncClient() as client:
         await wait_for_nodes(client, nodes)
@@ -125,45 +155,32 @@ async def run_experiment(config: dict) -> dict:
                 *(query_node(client, node, task, mode, timeout) for node in nodes)
             )
 
-            pairs = [(r.node_id, r.answer) for r in responses]
-            consensus_weighted, _ = weighted_consensus(pairs, tracker.weights())
-            consensus_majority, _ = majority_consensus(pairs)
-
-            result = RoundResult(
+            result = process_round(
                 round_index=round_index,
                 task_id=task["id"],
                 expected=expected,
-                consensus_weighted=consensus_weighted,
-                consensus_majority=consensus_majority,
                 responses=list(responses),
+                tracker=tracker,
+                logger=logger,
             )
-
-            for response in responses:
-                correct = response.answer is not None and response.answer == expected
-                reputation_before = tracker.get(response.node_id)
-                reputation_after = tracker.update(response.node_id, correct)
-                logger.record_node(
-                    round_index=round_index,
-                    task_id=task["id"],
-                    node_id=response.node_id,
-                    profile=profiles[response.node_id],
-                    answer=response.answer,
-                    expected=expected,
-                    correct=correct,
-                    latency_ms=response.latency_ms,
-                    reputation_before=reputation_before,
-                    reputation_after=reputation_after,
-                )
-
-            logger.record_round(result, num_nodes=len(node_ids))
             _print_round(result)
 
-    summary = logger.flush(config, tracker.weights(), profiles)
+    summary = logger.flush(
+        config,
+        tracker,
+        profiles,
+        seed=config.get("seed"),
+    )
     _print_summary(summary, output_dir)
     return summary
 
 
-def _print_round(result: RoundResult) -> None:
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+def _print_round(result) -> None:
+    from ..core.schemas import RoundResult  # local import to avoid circularity
     status = "OK " if result.consensus_correct else "ERR"
     print(
         f"[{status}] rodada {result.round_index:>3} | tarefa {result.task_id} | "
@@ -173,7 +190,7 @@ def _print_round(result: RoundResult) -> None:
 
 
 def _print_summary(summary: dict, output_dir: str) -> None:
-    print("\n=== Resumo do experimento ===")
+    print(f"\n=== Resumo do experimento [{summary['experiment_id']}] ===")
     print(f"Rodadas: {summary['rounds']}")
     print(f"Acurácia do consenso ponderado (reputação): {summary['consensus_accuracy_weighted']:.2%}")
     print(f"Acurácia do consenso por maioria (base):     {summary['consensus_accuracy_majority']:.2%}")
@@ -184,9 +201,13 @@ def _print_summary(summary: dict, output_dir: str) -> None:
     print(f"\nMétricas salvas em: {output_dir}")
 
 
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Orquestrador da rede de reputação.")
-    parser.add_argument("--config", default=_DEFAULT_CONFIG, help="Caminho do arquivo de configuração YAML.")
+    parser.add_argument("--config", default=_DEFAULT_CONFIG, help="Arquivo YAML de configuração.")
     return parser.parse_args(argv)
 
 
