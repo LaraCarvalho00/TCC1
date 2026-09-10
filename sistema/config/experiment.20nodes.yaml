@@ -1,0 +1,77 @@
+mode: simulation
+dataset: sample
+num_tasks: 10
+split: test
+rounds: 50
+alpha: 0.3
+timeout_s: 10.0
+output_dir: sistema/results/docker_20nodes
+experiment_id: docker_20nodes_20260908
+seed: 42
+reputation_mechanism: ema
+initial_reputation: 0.5
+honest_p_correct: 0.9
+unstable_p_drop: 0.3
+unstable_p_correct: 0.5
+collusion_value: null
+nodes:
+- id: node-0
+  url: http://node-0:8000
+  profile: malicious
+- id: node-1
+  url: http://node-1:8000
+  profile: malicious
+- id: node-2
+  url: http://node-2:8000
+  profile: malicious
+- id: node-3
+  url: http://node-3:8000
+  profile: malicious
+- id: node-4
+  url: http://node-4:8000
+  profile: malicious
+- id: node-5
+  url: http://node-5:8000
+  profile: honest
+- id: node-6
+  url: http://node-6:8000
+  profile: honest
+- id: node-7
+  url: http://node-7:8000
+  profile: honest
+- id: node-8
+  url: http://node-8:8000
+  profile: honest
+- id: node-9
+  url: http://node-9:8000
+  profile: honest
+- id: node-10
+  url: http://node-10:8000
+  profile: honest
+- id: node-11
+  url: http://node-11:8000
+  profile: honest
+- id: node-12
+  url: http://node-12:8000
+  profile: honest
+- id: node-13
+  url: http://node-13:8000
+  profile: honest
+- id: node-14
+  url: http://node-14:8000
+  profile: honest
+- id: node-15
+  url: http://node-15:8000
+  profile: honest
+- id: node-16
+  url: http://node-16:8000
+  profile: honest
+- id: node-17
+  url: http://node-17:8000
+  profile: honest
+- id: node-18
+  url: http://node-18:8000
+  profile: honest
+- id: node-19
+  url: http://node-19:8000
+  profile: honest

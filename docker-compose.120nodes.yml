@@ -1,0 +1,1332 @@
+services:
+  node-0:
+    environment:
+      NODE_ID: node-0
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '42'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-1:
+    environment:
+      NODE_ID: node-1
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '43'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-2:
+    environment:
+      NODE_ID: node-2
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '44'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-3:
+    environment:
+      NODE_ID: node-3
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '45'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-4:
+    environment:
+      NODE_ID: node-4
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '46'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-5:
+    environment:
+      NODE_ID: node-5
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '47'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-6:
+    environment:
+      NODE_ID: node-6
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '48'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-7:
+    environment:
+      NODE_ID: node-7
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '49'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-8:
+    environment:
+      NODE_ID: node-8
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '50'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-9:
+    environment:
+      NODE_ID: node-9
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '51'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-10:
+    environment:
+      NODE_ID: node-10
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '52'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-11:
+    environment:
+      NODE_ID: node-11
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '53'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-12:
+    environment:
+      NODE_ID: node-12
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '54'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-13:
+    environment:
+      NODE_ID: node-13
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '55'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-14:
+    environment:
+      NODE_ID: node-14
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '56'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-15:
+    environment:
+      NODE_ID: node-15
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '57'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-16:
+    environment:
+      NODE_ID: node-16
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '58'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-17:
+    environment:
+      NODE_ID: node-17
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '59'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-18:
+    environment:
+      NODE_ID: node-18
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '60'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-19:
+    environment:
+      NODE_ID: node-19
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '61'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-20:
+    environment:
+      NODE_ID: node-20
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '62'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-21:
+    environment:
+      NODE_ID: node-21
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '63'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-22:
+    environment:
+      NODE_ID: node-22
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '64'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-23:
+    environment:
+      NODE_ID: node-23
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '65'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-24:
+    environment:
+      NODE_ID: node-24
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '66'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-25:
+    environment:
+      NODE_ID: node-25
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '67'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-26:
+    environment:
+      NODE_ID: node-26
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '68'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-27:
+    environment:
+      NODE_ID: node-27
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '69'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-28:
+    environment:
+      NODE_ID: node-28
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '70'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-29:
+    environment:
+      NODE_ID: node-29
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: '71'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-30:
+    environment:
+      NODE_ID: node-30
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '72'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-31:
+    environment:
+      NODE_ID: node-31
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '73'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-32:
+    environment:
+      NODE_ID: node-32
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '74'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-33:
+    environment:
+      NODE_ID: node-33
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '75'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-34:
+    environment:
+      NODE_ID: node-34
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '76'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-35:
+    environment:
+      NODE_ID: node-35
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '77'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-36:
+    environment:
+      NODE_ID: node-36
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '78'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-37:
+    environment:
+      NODE_ID: node-37
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '79'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-38:
+    environment:
+      NODE_ID: node-38
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '80'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-39:
+    environment:
+      NODE_ID: node-39
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '81'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-40:
+    environment:
+      NODE_ID: node-40
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '82'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-41:
+    environment:
+      NODE_ID: node-41
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '83'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-42:
+    environment:
+      NODE_ID: node-42
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '84'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-43:
+    environment:
+      NODE_ID: node-43
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '85'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-44:
+    environment:
+      NODE_ID: node-44
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '86'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-45:
+    environment:
+      NODE_ID: node-45
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '87'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-46:
+    environment:
+      NODE_ID: node-46
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '88'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-47:
+    environment:
+      NODE_ID: node-47
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '89'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-48:
+    environment:
+      NODE_ID: node-48
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '90'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-49:
+    environment:
+      NODE_ID: node-49
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '91'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-50:
+    environment:
+      NODE_ID: node-50
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '92'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-51:
+    environment:
+      NODE_ID: node-51
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '93'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-52:
+    environment:
+      NODE_ID: node-52
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '94'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-53:
+    environment:
+      NODE_ID: node-53
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '95'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-54:
+    environment:
+      NODE_ID: node-54
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '96'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-55:
+    environment:
+      NODE_ID: node-55
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '97'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-56:
+    environment:
+      NODE_ID: node-56
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '98'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-57:
+    environment:
+      NODE_ID: node-57
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '99'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-58:
+    environment:
+      NODE_ID: node-58
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '100'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-59:
+    environment:
+      NODE_ID: node-59
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '101'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-60:
+    environment:
+      NODE_ID: node-60
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '102'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-61:
+    environment:
+      NODE_ID: node-61
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '103'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-62:
+    environment:
+      NODE_ID: node-62
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '104'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-63:
+    environment:
+      NODE_ID: node-63
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '105'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-64:
+    environment:
+      NODE_ID: node-64
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '106'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-65:
+    environment:
+      NODE_ID: node-65
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '107'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-66:
+    environment:
+      NODE_ID: node-66
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '108'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-67:
+    environment:
+      NODE_ID: node-67
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '109'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-68:
+    environment:
+      NODE_ID: node-68
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '110'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-69:
+    environment:
+      NODE_ID: node-69
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '111'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-70:
+    environment:
+      NODE_ID: node-70
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '112'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-71:
+    environment:
+      NODE_ID: node-71
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '113'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-72:
+    environment:
+      NODE_ID: node-72
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '114'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-73:
+    environment:
+      NODE_ID: node-73
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '115'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-74:
+    environment:
+      NODE_ID: node-74
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '116'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-75:
+    environment:
+      NODE_ID: node-75
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '117'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-76:
+    environment:
+      NODE_ID: node-76
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '118'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-77:
+    environment:
+      NODE_ID: node-77
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '119'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-78:
+    environment:
+      NODE_ID: node-78
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '120'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-79:
+    environment:
+      NODE_ID: node-79
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '121'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-80:
+    environment:
+      NODE_ID: node-80
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '122'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-81:
+    environment:
+      NODE_ID: node-81
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '123'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-82:
+    environment:
+      NODE_ID: node-82
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '124'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-83:
+    environment:
+      NODE_ID: node-83
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '125'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-84:
+    environment:
+      NODE_ID: node-84
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '126'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-85:
+    environment:
+      NODE_ID: node-85
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '127'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-86:
+    environment:
+      NODE_ID: node-86
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '128'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-87:
+    environment:
+      NODE_ID: node-87
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '129'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-88:
+    environment:
+      NODE_ID: node-88
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '130'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-89:
+    environment:
+      NODE_ID: node-89
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '131'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-90:
+    environment:
+      NODE_ID: node-90
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '132'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-91:
+    environment:
+      NODE_ID: node-91
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '133'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-92:
+    environment:
+      NODE_ID: node-92
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '134'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-93:
+    environment:
+      NODE_ID: node-93
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '135'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-94:
+    environment:
+      NODE_ID: node-94
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '136'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-95:
+    environment:
+      NODE_ID: node-95
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '137'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-96:
+    environment:
+      NODE_ID: node-96
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '138'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-97:
+    environment:
+      NODE_ID: node-97
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '139'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-98:
+    environment:
+      NODE_ID: node-98
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '140'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-99:
+    environment:
+      NODE_ID: node-99
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '141'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-100:
+    environment:
+      NODE_ID: node-100
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '142'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-101:
+    environment:
+      NODE_ID: node-101
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '143'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-102:
+    environment:
+      NODE_ID: node-102
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '144'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-103:
+    environment:
+      NODE_ID: node-103
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '145'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-104:
+    environment:
+      NODE_ID: node-104
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '146'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-105:
+    environment:
+      NODE_ID: node-105
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '147'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-106:
+    environment:
+      NODE_ID: node-106
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '148'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-107:
+    environment:
+      NODE_ID: node-107
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '149'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-108:
+    environment:
+      NODE_ID: node-108
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '150'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-109:
+    environment:
+      NODE_ID: node-109
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '151'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-110:
+    environment:
+      NODE_ID: node-110
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '152'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-111:
+    environment:
+      NODE_ID: node-111
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '153'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-112:
+    environment:
+      NODE_ID: node-112
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '154'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-113:
+    environment:
+      NODE_ID: node-113
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '155'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-114:
+    environment:
+      NODE_ID: node-114
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '156'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-115:
+    environment:
+      NODE_ID: node-115
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '157'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-116:
+    environment:
+      NODE_ID: node-116
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '158'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-117:
+    environment:
+      NODE_ID: node-117
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '159'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-118:
+    environment:
+      NODE_ID: node-118
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '160'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  node-119:
+    environment:
+      NODE_ID: node-119
+      PROFILE: honest
+      INFERENCE_MODE: mock
+      SEED: '161'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+    image: tcc1-node:latest
+  orchestrator:
+    depends_on:
+    - node-0
+    - node-1
+    - node-2
+    - node-3
+    - node-4
+    - node-5
+    - node-6
+    - node-7
+    - node-8
+    - node-9
+    - node-10
+    - node-11
+    - node-12
+    - node-13
+    - node-14
+    - node-15
+    - node-16
+    - node-17
+    - node-18
+    - node-19
+    - node-20
+    - node-21
+    - node-22
+    - node-23
+    - node-24
+    - node-25
+    - node-26
+    - node-27
+    - node-28
+    - node-29
+    - node-30
+    - node-31
+    - node-32
+    - node-33
+    - node-34
+    - node-35
+    - node-36
+    - node-37
+    - node-38
+    - node-39
+    - node-40
+    - node-41
+    - node-42
+    - node-43
+    - node-44
+    - node-45
+    - node-46
+    - node-47
+    - node-48
+    - node-49
+    - node-50
+    - node-51
+    - node-52
+    - node-53
+    - node-54
+    - node-55
+    - node-56
+    - node-57
+    - node-58
+    - node-59
+    - node-60
+    - node-61
+    - node-62
+    - node-63
+    - node-64
+    - node-65
+    - node-66
+    - node-67
+    - node-68
+    - node-69
+    - node-70
+    - node-71
+    - node-72
+    - node-73
+    - node-74
+    - node-75
+    - node-76
+    - node-77
+    - node-78
+    - node-79
+    - node-80
+    - node-81
+    - node-82
+    - node-83
+    - node-84
+    - node-85
+    - node-86
+    - node-87
+    - node-88
+    - node-89
+    - node-90
+    - node-91
+    - node-92
+    - node-93
+    - node-94
+    - node-95
+    - node-96
+    - node-97
+    - node-98
+    - node-99
+    - node-100
+    - node-101
+    - node-102
+    - node-103
+    - node-104
+    - node-105
+    - node-106
+    - node-107
+    - node-108
+    - node-109
+    - node-110
+    - node-111
+    - node-112
+    - node-113
+    - node-114
+    - node-115
+    - node-116
+    - node-117
+    - node-118
+    - node-119
+    volumes:
+    - ./sistema/results:/app/sistema/results
+    command:
+    - python
+    - -m
+    - sistema.orchestrator.run
+    - --config
+    - sistema/config/experiment.120nodes.yaml
+    image: tcc1-orchestrator:latest
