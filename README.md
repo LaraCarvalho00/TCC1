@@ -17,7 +17,9 @@ A pesquisa utiliza uma abordagem quantitativa e experimental baseada em:
 * **Algoritmos de Reputação:** Implementação de lógica para pontuação e penalização de nós.
 * **Linguagem:** Python para a lógica de coordenação e coleta de métricas.
 
-## 📂 Estrutura do Repitório
-* `/Divulgação/Apresentação`: 
-* `/Documentação`: 
-* `/Artigos`: 
+## 📂 Estrutura do repositório
+* `/sistema`: código da simulação, reputação **sem gabarito**, cenários e métricas
+* `/Protótipos`: documento de visão, acompanhamento e notas para o artigo (20/09)
+* `/ArtigosSelecionados`: revisão ad-hoc
+
+Rodar os três cenários da orientação: `python -m sistema.scripts.run_scenarios`

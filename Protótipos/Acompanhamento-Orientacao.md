@@ -103,8 +103,35 @@ acurácia agregada, taxa de consenso correto, tempo médio de resposta e evoluç
 
 ## Pendências para a próxima reunião (quinta, 14h)
 
-- [ ] Executar `test_model` com o SmolLM3-3B no GSM8K e registrar acurácia/tempo.
-- [ ] Avaliar risco de *gap* linguístico (GSM8K em inglês) e possíveis datasets em português.
-- [ ] Rodar a rede em containers (`docker compose up`) e coletar métricas em modo `mock`.
-- [ ] Decidir se nós instáveis serão categoria distinta ou agrupados com maliciosos na v1.
-- [ ] Avaliar necessidade de VM para executar múltiplos nós com o modelo real.
+- [x] Decidir tratamento dos nós instáveis (categoria distinta, penalização por ausência).
+- [ ] Executar `test_model` com o SmolLM3-3B no GSM8K **test** e registrar acurácia/tempo.
+- [ ] Colar no artigo: hardware, TR de reputação e novidade ([Notas-artigo-20-09.md](Notas-artigo-20-09.md)).
+- [ ] Aplicar os comentários do PDF do Canvas (arquivo não está neste repositório).
+
+---
+
+## Reunião — setembro/2026 (erro metodológico e retrabalho)
+
+### Diagnóstico da orientação
+
+- Usar o gabarito para atualizar reputação **durante a inferência** é erro metodológico.
+- Nós instáveis estavam no artigo sem tratamento definido.
+- Testes anteriores devem ser **descartados** e refeitos.
+- Conluio deve poder degradar a rede; a reputação precisa ser recalibrada sem oráculo.
+- Hardware limitado → redes pequenas; avaliar comportamentos **separados** e um misto leve.
+- Conferir que a base de avaliação não é a de treino.
+- Artigo (20/09): hardware, trabalhos relacionados de reputação, novidade, correções do PDF.
+
+### O que foi feito no repositório
+
+| Item | Decisão / entrega |
+| --- | --- |
+| Ground-truth na reputação | Removido. Sinal = acordo com consenso + penalização de timeout. |
+| Testes antigos (matriz 5/10/20) | Apagados. |
+| Instável | Não vota se não responde; reputação `s = 0`. |
+| Recalibração | `α = 0.25`, `min_confidence = 0.55` (não atualiza em empate). |
+| Cenários | `python -m sistema.scripts.run_scenarios` (6 nós). |
+| Dataset | Scripts recusam split `train`; avaliação em `test`. |
+| Texto | [Notas-artigo-20-09.md](Notas-artigo-20-09.md) |
+
+A tabela de “validação já realizada” **acima desta seção está invalidada** (usava gabarito na reputação). Usar só os novos CSVs em `sistema/results/cenarios/`.

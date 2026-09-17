@@ -4,8 +4,9 @@ Duas fontes:
 
 * ``load_sample``: amostra offline embutida no repositório (não requer download),
   para validar o pipeline rapidamente.
-* ``load_gsm8k``: baixa o dataset GSM8K via biblioteca ``datasets`` da Hugging
-  Face (requer instalação e acesso à internet).
+* ``load_gsm8k``: baixa o GSM8K via Hugging Face. Experimentos usam o split
+  ``test``. Este projeto **não treina** o LLM; o SmolLM3-3B entra pré-treinado
+  e a avaliação nunca usa o split ``train``.
 """
 
 from __future__ import annotations

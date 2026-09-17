@@ -22,6 +22,11 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
     if args.dataset == "gsm8k":
+        if args.split == "train":
+            raise ValueError(
+                "Avaliação deve usar o split 'test' do GSM8K. "
+                "O split 'train' não é usado neste TCC (o modelo não é fine-tunado aqui)."
+            )
         tasks = dataset.load_gsm8k(split=args.split, limit=args.num_samples)
     else:
         tasks = dataset.load_sample(limit=args.num_samples)

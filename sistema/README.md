@@ -1,135 +1,83 @@
 # Sistema — Rede Distribuída de Inferência com Reputação
 
-Implementação da versão inicial do TCC: um **orquestrador central fixo** distribui
-tarefas a **nós em containers**, coleta as respostas de forma **assíncrona**, aplica
-**consenso ponderado por reputação**, atualiza a **reputação dinâmica** dos nós e
-registra **métricas** de cada rodada.
+Orquestrador central fixo distribui tarefas a nós em containers, coleta
+respostas de forma assíncrona, aplica **consenso ponderado por reputação** e
+atualiza reputação **sem usar o gabarito**. O ground-truth entra só nas métricas.
 
-Esta primeira versão segue as decisões da reunião de orientação (20/08): começar
-simples, com orquestrador fixo em rede bem conectada, para obter rapidamente um
-sistema mínimo funcional.
+## O que mudou após a reunião de orientação
 
-## Mapa das decisões → implementação
-
-| Decisão da reunião | Onde está |
-| --- | --- |
-| Orquestrador fixo, rede bem conectada (estrela) | [orchestrator/run.py](sistema/orchestrator/run.py) |
-| Comunicação assíncrona | `httpx` + `asyncio.gather` (orquestrador) e FastAPI (nós) |
-| Nós honestos / maliciosos / instáveis | [core/behavior.py](sistema/core/behavior.py), [node/app.py](sistema/node/app.py) |
-| Reputação dinâmica atualizada por rodada | [core/reputation.py](sistema/core/reputation.py) |
-| Consenso (ponderado vs. maioria) | [core/consensus.py](sistema/core/consensus.py) |
-| Dataset GSM8K (+ amostra offline) | [core/dataset.py](sistema/core/dataset.py) |
-| Modelo pequeno (SmolLM3-3B) | [node/inference.py](sistema/node/inference.py), [scripts/test_model.py](sistema/scripts/test_model.py) |
-| Ground truth só no orquestrador | tarefas em modo `real` não enviam `expected` |
-| Métricas (acurácia, consenso, tempo, reputação) | [core/metrics.py](sistema/core/metrics.py) |
-
-## Estrutura
-
-```
-sistema/
-├── core/            # lógica compartilhada (sem dependências externas)
-│   ├── reputation.py    # EMA da reputação
-│   ├── consensus.py     # consenso ponderado e por maioria
-│   ├── behavior.py      # perfis honest/malicious/unstable (simulação)
-│   ├── dataset.py       # GSM8K + amostra offline
-│   ├── answer.py        # extração da resposta numérica
-│   ├── metrics.py       # registro CSV/JSON
-│   └── data/gsm8k_sample.json
-├── simulate.py      # simulação local (sem Docker, sem modelo)
-├── node/            # servidor FastAPI do nó + inferência
-├── orchestrator/    # orquestrador assíncrono
-├── scripts/         # gerador de compose e teste de modelo
-└── config/experiment.yaml
-```
+Erro metodológico corrigido: a reputação **não** compara a resposta com o
+gabarito. O sinal é (1) acordo com o consenso ponderado da própria rodada e
+(2) penalização se o nó não responde (tratamento do perfil instável).
 
 ## Uso rápido
 
-### 1) Simulação local (sem instalar nada)
-
-Valida reputação, consenso e métricas em segundos, usando só a biblioteca padrão:
+Simulação local (sem Docker, sem modelo) — caminho principal no hardware da equipe:
 
 ```bash
-python -m sistema.simulate --nodes 4 --malicious 0.25 --rounds 20
+python -m sistema.scripts.run_scenarios
 ```
 
-Cenário difícil (50% maliciosos em conluio) — mostra a vantagem da reputação:
+Um cenário avulso:
 
 ```bash
-python -m sistema.simulate --nodes 4 --malicious 0.5 --collusion-value 999 --rounds 20
+python -m sistema.simulate --nodes 6 --malicious 0.33 --collusion-value 999 --rounds 30
+python -m sistema.simulate --nodes 6 --unstable 0.33 --rounds 30
 ```
 
-### 2) Rede em containers (comunicação assíncrona)
+Containers (modo mock):
 
 ```bash
 docker compose up --build
 ```
 
-Sobe 4 nós (3 honestos + 1 malicioso) e o orquestrador, que roda o experimento e
-grava as métricas em `sistema/results/`. Modo `mock` por padrão (sem modelo).
-
-Escalar para mais nós (ex.: 10 nós, 25% maliciosos):
-
-```bash
-python -m sistema.scripts.gen_compose --nodes 10 --malicious 0.25
-docker compose -f docker-compose.generated.yml up --build
-```
-
-### 3) Testar o modelo no GSM8K
+Avaliação do modelo no **split de teste** do GSM8K (nunca `train`):
 
 ```bash
 pip install -r sistema/requirements-model.txt
-python -m sistema.scripts.test_model --model HuggingFaceTB/SmolLM3-3B --dataset gsm8k --num-samples 20
+python -m sistema.scripts.test_model --dataset gsm8k --split test --num-samples 20
 ```
 
 ## Mecanismo de reputação
 
-Cada nó começa com reputação `0.5`, atualizada a cada rodada por média móvel
-exponencial:
+Cada nó começa em `0.5`. A cada rodada:
 
-$$r \leftarrow (1 - \alpha)\,r + \alpha\,s, \quad s = \begin{cases} 1 & \text{resposta correta} \\ 0 & \text{incorreta ou ausente} \end{cases}$$
+1. O consenso ponderado usa as reputações **já conhecidas**.
+2. Se a fração de peso no vencedor ≥ `min_confidence` (padrão 0.55), quem
+   concordou recebe `s = 1` e quem divergiu recebe `s = 0`.
+3. Ausência de resposta (timeout / drop do instável) recebe `s = 0` mesmo sem
+   consenso confiável.
+4. Empate ou consenso fraco: reputação **não muda**.
+5. EMA: `r ← (1 - α)·r + α·s`, com `α = 0.25`.
 
-O consenso ponderado soma a reputação dos nós que apontam cada resposta e escolhe
-a de maior peso; a reputação da rodada anterior é usada como peso da rodada atual.
+O gabarito **não** entra nos passos 1–5. Ele só marca `correct` no CSV de avaliação.
 
-## Métricas geradas (`sistema/results/`)
+Isso implica um resultado científico honesto: **conluio com maioria pode
+comprometer a rede** — exatamente o que a orientação pediu para recalibrar e
+observar, em vez de mascarar com um oráculo.
 
-- `per_node.csv` — resposta, acerto, latência e reputação (antes/depois) por nó e rodada.
-- `rounds.csv` — consenso ponderado vs. maioria e acerto por rodada.
-- `summary.json` — acurácia agregada, tempo médio e reputação final por perfil.
+## Tratamento do nó instável
 
-## Diagrama da rede
+| Evento | Consenso | Reputação |
+| --- | --- | --- |
+| Não responde / timeout | voto ignorado | `s = 0` |
+| Responde, mas diverge do consenso confiável | voto entra com peso atual | `s = 0` |
+| Responde e concorda | voto entra | `s = 1` |
 
-```mermaid
-graph TD
-    O[Orquestrador central] -->|tarefa| N0[Nó 0 honesto]
-    O -->|tarefa| N1[Nó 1 honesto]
-    O -->|tarefa| N2[Nó 2 honesto]
-    O -->|tarefa| N3[Nó 3 malicioso]
-    N0 -->|resposta| O
-    N1 -->|resposta| O
-    N2 -->|resposta| O
-    N3 -->|resposta| O
-```
+## Dataset: treino vs avaliação
 
-## Diagrama de avaliação
+Este TCC **não faz fine-tune**. O SmolLM3-3B é usado pré-treinado. Tarefas de
+experimento vêm do split **`test`** do GSM8K (ou da amostra offline, que não é
+o conjunto de treino). O split `train` é recusado pelos scripts de avaliação.
 
-```mermaid
-graph LR
-    T[Tarefa GSM8K] --> S[Sistema]
-    subgraph S[Sistema]
-        D[Distribuição assíncrona] --> C[Coleta das respostas]
-        C --> K[Consenso ponderado por reputação]
-        K --> A[Avaliação vs. ground truth]
-        A --> R[Atualização da reputação]
-        R --> M[Registro de métricas]
-    end
-    M --> H[(Histórico / CSV+JSON)]
-    R -->|peso da próxima rodada| K
-```
+## Métricas (`sistema/results/`)
 
-## Próximos passos
+- `per_node.csv` — `correct` (vs gabarito, só avaliação) e `reputation_score` (sinal real).
+- `rounds.csv` — consenso ponderado vs maioria, confiança da rodada.
+- `summary.json` — acurácias e reputação final por perfil (`reputation_uses_ground_truth: false`).
 
-- Rodar `test_model` para medir a acurácia do SmolLM3-3B no GSM8K e o tempo por tarefa.
-- Avaliar cenários (5/10/20 nós; 0/25/50% maliciosos) com `gen_compose`.
-- Incluir nós instáveis (`--unstable`) e analisar o efeito da latência.
-- Migrar de `mock` para `real` (inferência com LLM) quando o hardware permitir.
+## Hardware de referência (máquina da equipe)
+
+Dell Inspiron 15 3511, Intel Core i5-1135G7 (4 núcleos / 8 threads), ~8 GB RAM,
+Intel Iris Xe. Por isso as redes avaliadas ficam em **6 nós** e a matriz 5/10/20
+foi descartada.

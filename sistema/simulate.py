@@ -1,15 +1,12 @@
 """Simulação local do sistema, em processo único e sem dependências externas.
 
-Reproduz o fluxo completo do Documento de Visão (distribuição de tarefas,
-coleta de respostas, consenso, atualização de reputação e registro de métricas)
-sem Docker e sem executar o modelo. Serve para validar rapidamente o mecanismo
-de reputação e o consenso — a "versão mínima funcionando" combinada na reunião.
+Reproduz distribuição, coleta, consenso, reputação observável e métricas
+sem Docker e sem o modelo. O gabarito só fabrica o comportamento dos perfis
+e avalia o consenso; **não** entra no cálculo da reputação.
 
 Uso:
-    python -m sistema.simulate --nodes 4 --malicious 0.25 --rounds 10
-
-Observação: em simulação o comportamento dos perfis é fabricado a partir do
-gabarito. No processo real (versão em containers) os nós não recebem o gabarito.
+    python -m sistema.simulate --nodes 6 --malicious 0.33 --rounds 30
+    python -m sistema.scripts.run_scenarios
 """
 
 from __future__ import annotations
@@ -20,10 +17,10 @@ import random
 
 from .core import behavior, dataset
 from .core.answer import normalize
-from .core.consensus import majority_consensus, weighted_consensus
 from .core.metrics import MetricsLogger
+from .core.pipeline import run_round
 from .core.reputation import ReputationTracker
-from .core.schemas import NodeResponse, RoundResult
+from .core.schemas import NodeResponse
 
 _DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), "results", "simulacao")
 
@@ -59,8 +56,14 @@ def run_simulation(args: argparse.Namespace) -> dict:
     config = behavior.BehaviorConfig(
         honest_p_correct=args.honest_accuracy,
         malicious_collusion_value=args.collusion_value,
+        unstable_p_drop=args.unstable_p_drop,
+        unstable_p_correct=args.unstable_p_correct,
     )
-    tracker = ReputationTracker(node_ids, alpha=args.alpha)
+    tracker = ReputationTracker(
+        node_ids,
+        alpha=args.alpha,
+        min_confidence=args.min_confidence,
+    )
     logger = MetricsLogger(args.output)
 
     for round_index in range(args.rounds):
@@ -80,37 +83,14 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 )
             )
 
-        pairs = [(r.node_id, r.answer) for r in responses]
-        consensus_w, _ = weighted_consensus(pairs, tracker.weights())
-        consensus_m, _ = majority_consensus(pairs)
-
-        result = RoundResult(
+        run_round(
             round_index=round_index,
             task_id=task["id"],
             expected=expected,
-            consensus_weighted=consensus_w,
-            consensus_majority=consensus_m,
             responses=responses,
+            tracker=tracker,
+            logger=logger,
         )
-
-        for response in responses:
-            correct = response.answer is not None and response.answer == expected
-            reputation_before = tracker.get(response.node_id)
-            reputation_after = tracker.update(response.node_id, correct)
-            logger.record_node(
-                round_index=round_index,
-                task_id=task["id"],
-                node_id=response.node_id,
-                profile=response.profile,
-                answer=response.answer,
-                expected=expected,
-                correct=correct,
-                latency_ms=response.latency_ms,
-                reputation_before=reputation_before,
-                reputation_after=reputation_after,
-            )
-
-        logger.record_round(result, num_nodes=len(node_ids))
 
     run_config = {
         "nodes": args.nodes,
@@ -118,22 +98,28 @@ def run_simulation(args: argparse.Namespace) -> dict:
         "unstable_frac": args.unstable,
         "rounds": args.rounds,
         "alpha": args.alpha,
+        "min_confidence": args.min_confidence,
         "seed": args.seed,
         "honest_accuracy": args.honest_accuracy,
         "collusion_value": args.collusion_value,
+        "unstable_p_drop": args.unstable_p_drop,
+        "unstable_p_correct": args.unstable_p_correct,
         "profiles": profiles,
+        "reputation_uses_ground_truth": False,
+        "eval_dataset": "gsm8k_sample_offline (nao usado para treinar o modelo)",
     }
     summary = logger.flush(run_config, tracker.weights(), profiles)
-    _print_summary(summary, profiles, args.output)
+    _print_summary(summary, args.output)
     return summary
 
 
-def _print_summary(summary: dict, profiles: dict[str, str], output_dir: str) -> None:
+def _print_summary(summary: dict, output_dir: str) -> None:
     print("\n=== Resumo da simulação ===")
     print(f"Rodadas: {summary['rounds']}")
     print(f"Acurácia do consenso ponderado (reputação): {summary['consensus_accuracy_weighted']:.2%}")
     print(f"Acurácia do consenso por maioria (base):     {summary['consensus_accuracy_majority']:.2%}")
     print(f"Tempo médio de resposta: {summary['mean_latency_ms']:.0f} ms")
+    print("Reputação usa ground-truth: não")
     print("\nReputação final média por perfil:")
     for profile, value in sorted(summary["final_reputation_by_profile"].items()):
         print(f"  {profile:<10} {value:.3f}")
@@ -142,11 +128,17 @@ def _print_summary(summary: dict, profiles: dict[str, str], output_dir: str) -> 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Simulação local da rede de reputação.")
-    parser.add_argument("--nodes", type=int, default=4, help="Número de nós (padrão: 4).")
-    parser.add_argument("--malicious", type=float, default=0.25, help="Fração de nós maliciosos (0-1).")
+    parser.add_argument("--nodes", type=int, default=6, help="Número de nós (padrão: 6, rede pequena).")
+    parser.add_argument("--malicious", type=float, default=0.0, help="Fração de nós maliciosos (0-1).")
     parser.add_argument("--unstable", type=float, default=0.0, help="Fração de nós instáveis (0-1).")
-    parser.add_argument("--rounds", type=int, default=10, help="Número de rodadas/tarefas.")
-    parser.add_argument("--alpha", type=float, default=0.3, help="Taxa de aprendizado da reputação (EMA).")
+    parser.add_argument("--rounds", type=int, default=30, help="Número de rodadas/tarefas.")
+    parser.add_argument("--alpha", type=float, default=0.25, help="Taxa de aprendizado da reputação (EMA).")
+    parser.add_argument(
+        "--min-confidence",
+        type=float,
+        default=0.55,
+        help="Fração mínima de peso no consenso para atualizar reputação.",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Semente para reprodutibilidade.")
     parser.add_argument(
         "--honest-accuracy",
@@ -159,6 +151,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=int,
         default=None,
         help="Se definido, todos os maliciosos respondem este valor (conluio).",
+    )
+    parser.add_argument(
+        "--unstable-p-drop",
+        type=float,
+        default=0.3,
+        help="Probabilidade de o nó instável não responder.",
+    )
+    parser.add_argument(
+        "--unstable-p-correct",
+        type=float,
+        default=0.5,
+        help="Probabilidade de acerto do nó instável quando responde.",
     )
     parser.add_argument("--output", default=_DEFAULT_OUTPUT, help="Diretório de saída das métricas.")
     return parser.parse_args(argv)

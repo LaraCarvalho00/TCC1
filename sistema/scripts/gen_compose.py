@@ -59,6 +59,7 @@ def generate(args: argparse.Namespace) -> None:
         "split": "test",
         "rounds": args.rounds,
         "alpha": args.alpha,
+        "min_confidence": args.min_confidence,
         "timeout_s": args.timeout_s,
         "output_dir": args.output_dir,
         "nodes": nodes_config,
@@ -75,7 +76,7 @@ def generate(args: argparse.Namespace) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Gerador de docker-compose para N nós.")
-    parser.add_argument("--nodes", type=int, default=4)
+    parser.add_argument("--nodes", type=int, default=6)
     parser.add_argument("--malicious", type=float, default=0.25, help="Fração de nós maliciosos (0-1).")
     parser.add_argument("--unstable", type=float, default=0.0, help="Fração de nós instáveis (0-1).")
     parser.add_argument("--seed", type=int, default=10)
@@ -85,8 +86,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mode", choices=["simulation", "real"], default="simulation")
     parser.add_argument("--dataset", choices=["sample", "gsm8k"], default="sample")
     parser.add_argument("--num-tasks", type=int, default=10)
-    parser.add_argument("--rounds", type=int, default=20)
-    parser.add_argument("--alpha", type=float, default=0.3)
+    parser.add_argument("--rounds", type=int, default=30)
+    parser.add_argument("--alpha", type=float, default=0.25)
+    parser.add_argument("--min-confidence", type=float, default=0.55)
     parser.add_argument("--timeout-s", type=float, default=10.0)
     parser.add_argument("--output-dir", default="sistema/results/experimento")
     parser.add_argument("--compose-out", default="docker-compose.generated.yml")

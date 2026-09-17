@@ -43,6 +43,7 @@ class RoundResult:
     consensus_weighted: Optional[Answer]
     consensus_majority: Optional[Answer]
     responses: list[NodeResponse] = field(default_factory=list)
+    consensus_confidence: float = 0.0
 
     @property
     def consensus_correct(self) -> bool:

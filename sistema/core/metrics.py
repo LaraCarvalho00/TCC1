@@ -1,9 +1,8 @@
 """Registro de métricas do experimento em CSV e JSON.
 
-Gera dois CSVs (um por nó/rodada e um resumo por rodada) e um JSON com a
-configuração e os indicadores finais, cobrindo as variáveis dependentes do
-Documento de Visão: acurácia agregada, taxa de consenso correto, tempo médio
-e estabilidade da reputação.
+O gabarito (``expected`` / ``correct``) entra **só** nestes arquivos, para a
+avaliação científica. A coluna ``reputation_score`` é o sinal que de fato
+alimentou a reputação (acordo com o consenso ou 0 em ausência de resposta).
 """
 
 from __future__ import annotations
@@ -24,6 +23,8 @@ PER_NODE_FIELDS = [
     "answer",
     "expected",
     "correct",
+    "agreed",
+    "reputation_score",
     "latency_ms",
     "reputation_before",
     "reputation_after",
@@ -37,6 +38,7 @@ ROUND_FIELDS = [
     "consensus_correct",
     "consensus_majority",
     "majority_correct",
+    "consensus_confidence",
     "num_responses",
     "num_nodes",
     "mean_latency_ms",
@@ -59,6 +61,8 @@ class MetricsLogger:
         answer,
         expected,
         correct: bool,
+        agreed: Optional[bool],
+        reputation_score: Optional[float],
         latency_ms: int,
         reputation_before: float,
         reputation_after: float,
@@ -72,6 +76,8 @@ class MetricsLogger:
                 "answer": answer,
                 "expected": expected,
                 "correct": int(correct),
+                "agreed": "" if agreed is None else int(agreed),
+                "reputation_score": "" if reputation_score is None else round(reputation_score, 4),
                 "latency_ms": latency_ms,
                 "reputation_before": round(reputation_before, 4),
                 "reputation_after": round(reputation_after, 4),
@@ -90,6 +96,7 @@ class MetricsLogger:
                 "consensus_correct": int(result.consensus_correct),
                 "consensus_majority": result.consensus_majority,
                 "majority_correct": int(result.majority_correct),
+                "consensus_confidence": result.consensus_confidence,
                 "num_responses": len(latencies),
                 "num_nodes": num_nodes,
                 "mean_latency_ms": mean_latency,
@@ -117,6 +124,7 @@ class MetricsLogger:
             "mean_latency_ms": round(statistics.mean(latencies), 1) if latencies else 0.0,
             "final_reputation_by_profile": mean_rep_by_profile,
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
+            "reputation_uses_ground_truth": False,
         }
 
     def flush(

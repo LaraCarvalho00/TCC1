@@ -1,6 +1,5 @@
-# Cenário inicial: 1 orquestrador fixo + 4 nós (3 honestos, 1 malicioso).
-# Rede bem conectada (estrela): o orquestrador fala com cada nó.
-# Modo mock por padrão (valida comunicação assíncrona e reputação sem modelo).
+# Cenário honesto vs malicioso, 6 nós mock (cabe no notebook da equipe).
+# Rede estrela: orquestrador fala com cada nó.
 
 services:
   node-0:
@@ -39,9 +38,30 @@ services:
       dockerfile: sistema/node/Dockerfile
     environment:
       NODE_ID: node-3
-      PROFILE: malicious
+      PROFILE: honest
       INFERENCE_MODE: mock
       SEED: "13"
+
+  node-4:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-4
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: "14"
+      MALICIOUS_VALUE: "999"
+
+  node-5:
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
+    environment:
+      NODE_ID: node-5
+      PROFILE: malicious
+      INFERENCE_MODE: mock
+      SEED: "15"
       MALICIOUS_VALUE: "999"
 
   orchestrator:
@@ -53,6 +73,8 @@ services:
       - node-1
       - node-2
       - node-3
+      - node-4
+      - node-5
     volumes:
       - ./sistema/results:/app/sistema/results
     command: ["python", "-m", "sistema.orchestrator.run", "--config", "sistema/config/experiment.yaml"]

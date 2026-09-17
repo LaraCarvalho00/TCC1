@@ -6,10 +6,12 @@ Os três perfis previstos no trabalho:
 * ``honest``: responde correto na maior parte das vezes.
 * ``malicious``: responde incorreto de forma deliberada; opcionalmente em conluio
   (todos os maliciosos apontam o mesmo valor errado para tentar enviesar o voto).
-* ``unstable``: alta variância — pode atrasar, falhar (timeout) ou errar.
+* ``unstable``: tratamento explícito — com probabilidade ``unstable_p_drop``
+  não responde (voto ausente e reputação penalizada); quando responde, erra
+  com alta chance e latência irregular.
 
-Nenhum destes recebe o ground truth no processo real; a dependência de
-``expected`` aqui existe só para reproduzir o comportamento em simulação.
+``expected`` existe só para fabricar o perfil na simulação. No processo real
+os nós não recebem gabarito, e o orquestrador **não** usa gabarito na reputação.
 """
 
 from __future__ import annotations

@@ -1,12 +1,10 @@
 """Orquestrador central (fixo) da rede distribuída.
 
-Responsável por, a cada rodada: distribuir a tarefa a todos os nós de forma
-assíncrona (coleta concorrente via ``httpx``), agregar as respostas por consenso
-(ponderado por reputação e por maioria simples), avaliar contra o gabarito,
-atualizar a reputação dinâmica e registrar as métricas.
+A cada rodada: distribui a tarefa, coleta respostas em paralelo, agrega por
+consenso (ponderado e maioria), atualiza reputação **sem gabarito** e só então
+avalia o consenso contra o gabarito para métricas.
 
-Topologia: estrela (o orquestrador possui um canal para cada nó), correspondendo
-à decisão de começar com um orquestrador fixo em uma rede bem conectada.
+Topologia: estrela (orquestrador com um canal para cada nó).
 
 Uso:
     python -m sistema.orchestrator.run --config sistema/config/experiment.yaml
@@ -24,8 +22,8 @@ import yaml
 
 from ..core import dataset as dataset_module
 from ..core.answer import normalize
-from ..core.consensus import majority_consensus, weighted_consensus
 from ..core.metrics import MetricsLogger
+from ..core.pipeline import run_round
 from ..core.reputation import ReputationTracker
 from ..core.schemas import NodeResponse, RoundResult
 
@@ -40,8 +38,11 @@ def load_config(path: str) -> dict[str, Any]:
 def load_tasks(config: dict) -> list[dict]:
     source = config.get("dataset", "sample")
     limit = config.get("num_tasks")
+    split = config.get("split", "test")
+    if split == "train":
+        raise ValueError("Experimentos usam o split de teste. Não avaliar no train do GSM8K.")
     if source == "gsm8k":
-        return dataset_module.load_gsm8k(split=config.get("split", "test"), limit=limit)
+        return dataset_module.load_gsm8k(split=split, limit=limit)
     return dataset_module.load_sample(limit=limit)
 
 
@@ -111,7 +112,11 @@ async def run_experiment(config: dict) -> dict:
     timeout = float(config.get("timeout_s", 10))
     output_dir = config.get("output_dir", os.path.join("sistema", "results", "experimento"))
 
-    tracker = ReputationTracker(node_ids, alpha=float(config.get("alpha", 0.3)))
+    tracker = ReputationTracker(
+        node_ids,
+        alpha=float(config.get("alpha", 0.25)),
+        min_confidence=float(config.get("min_confidence", 0.55)),
+    )
     logger = MetricsLogger(output_dir)
 
     async with httpx.AsyncClient() as client:
@@ -121,41 +126,19 @@ async def run_experiment(config: dict) -> dict:
             task = tasks[round_index % len(tasks)]
             expected = normalize(task["answer"])
 
-            responses: list[NodeResponse] = await asyncio.gather(
-                *(query_node(client, node, task, mode, timeout) for node in nodes)
+            responses: list[NodeResponse] = list(
+                await asyncio.gather(
+                    *(query_node(client, node, task, mode, timeout) for node in nodes)
+                )
             )
-
-            pairs = [(r.node_id, r.answer) for r in responses]
-            consensus_weighted, _ = weighted_consensus(pairs, tracker.weights())
-            consensus_majority, _ = majority_consensus(pairs)
-
-            result = RoundResult(
+            result = run_round(
                 round_index=round_index,
                 task_id=task["id"],
                 expected=expected,
-                consensus_weighted=consensus_weighted,
-                consensus_majority=consensus_majority,
-                responses=list(responses),
+                responses=responses,
+                tracker=tracker,
+                logger=logger,
             )
-
-            for response in responses:
-                correct = response.answer is not None and response.answer == expected
-                reputation_before = tracker.get(response.node_id)
-                reputation_after = tracker.update(response.node_id, correct)
-                logger.record_node(
-                    round_index=round_index,
-                    task_id=task["id"],
-                    node_id=response.node_id,
-                    profile=profiles[response.node_id],
-                    answer=response.answer,
-                    expected=expected,
-                    correct=correct,
-                    latency_ms=response.latency_ms,
-                    reputation_before=reputation_before,
-                    reputation_after=reputation_after,
-                )
-
-            logger.record_round(result, num_nodes=len(node_ids))
             _print_round(result)
 
     summary = logger.flush(config, tracker.weights(), profiles)
@@ -178,6 +161,7 @@ def _print_summary(summary: dict, output_dir: str) -> None:
     print(f"Acurácia do consenso ponderado (reputação): {summary['consensus_accuracy_weighted']:.2%}")
     print(f"Acurácia do consenso por maioria (base):     {summary['consensus_accuracy_majority']:.2%}")
     print(f"Tempo médio de resposta: {summary['mean_latency_ms']:.0f} ms")
+    print("Reputação usa ground-truth: não")
     print("\nReputação final média por perfil:")
     for profile, value in sorted(summary["final_reputation_by_profile"].items()):
         print(f"  {profile:<10} {value:.3f}")

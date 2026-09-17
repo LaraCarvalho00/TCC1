@@ -1,21 +1,24 @@
-# Configuração do experimento (orquestrador fixo, rede bem conectada).
+# Configuração do experimento (orquestrador fixo, rede pequena — limite de hardware).
 #
-# mode: "simulation" -> nós recebem o gabarito e fabricam o comportamento do
-#                       perfil (valida comunicação e reputação sem modelo).
-#       "real"       -> nós NÃO recebem o gabarito; nós honestos executam o LLM.
+# mode: "simulation" -> nós recebem o gabarito só para fabricar o perfil.
+#                       A reputação no orquestrador NÃO usa esse gabarito.
+#       "real"       -> nós NÃO recebem o gabarito; honestos executam o LLM.
 mode: simulation
 
-# Fonte das tarefas: "sample" (amostra offline embutida) ou "gsm8k" (download).
+# Avaliação: split de TESTE do GSM8K (ou amostra offline). O modelo SmolLM3-3B
+# não é treinado neste projeto; portanto treino e avaliação não compartilham
+# um fine-tune nosso. Experimentos reportados usam `test`, nunca `train`.
 dataset: sample
-num_tasks: 10          # limita o nº de tarefas carregadas (null = todas)
-split: test            # usado apenas quando dataset = gsm8k
+num_tasks: 10
+split: test
 
-rounds: 20             # nº de rodadas (null = uma por tarefa)
-alpha: 0.3             # taxa de aprendizado da reputação (EMA)
-timeout_s: 10          # tempo máximo de espera por nó (detecta instabilidade)
+rounds: 30
+alpha: 0.25            # EMA mais conservadora após a recalibração
+min_confidence: 0.55   # só atualiza reputação se o consenso tiver peso claro
+timeout_s: 10
 output_dir: sistema/results/experimento
 
-# Cenário inicial combinado: 4 nós, rede bem conectada, 25% maliciosos.
+# 6 nós: 4 honestos + 2 maliciosos (cenário honesto vs malicioso, baixo estresse)
 nodes:
   - id: node-0
     url: http://node-0:8000
@@ -28,4 +31,10 @@ nodes:
     profile: honest
   - id: node-3
     url: http://node-3:8000
+    profile: honest
+  - id: node-4
+    url: http://node-4:8000
+    profile: malicious
+  - id: node-5
+    url: http://node-5:8000
     profile: malicious
