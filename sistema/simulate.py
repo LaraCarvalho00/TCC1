@@ -44,9 +44,22 @@ def build_profiles(num_nodes: int, malicious_frac: float, unstable_frac: float) 
     return profiles
 
 
-def run_simulation(args: argparse.Namespace) -> dict:
-    rng = random.Random(args.seed)
-    profiles = build_profiles(args.nodes, args.malicious, args.unstable)
+def execute_simulation(
+    *,
+    profiles: dict[str, str],
+    rounds: int,
+    seed: int,
+    alpha: float = 0.25,
+    min_confidence: float = 0.55,
+    honest_accuracy: float = 0.9,
+    collusion_value: int | None = None,
+    unstable_p_drop: float = 0.3,
+    unstable_p_correct: float = 0.5,
+    output: str | None = None,
+    persist: bool = True,
+) -> dict:
+    """Executa o pipeline existente (consenso + reputação) com perfis já definidos."""
+    rng = random.Random(seed)
     node_ids = list(profiles)
 
     tasks = dataset.load_sample()
@@ -54,19 +67,19 @@ def run_simulation(args: argparse.Namespace) -> dict:
         raise RuntimeError("Amostra de dataset vazia.")
 
     config = behavior.BehaviorConfig(
-        honest_p_correct=args.honest_accuracy,
-        malicious_collusion_value=args.collusion_value,
-        unstable_p_drop=args.unstable_p_drop,
-        unstable_p_correct=args.unstable_p_correct,
+        honest_p_correct=honest_accuracy,
+        malicious_collusion_value=collusion_value,
+        unstable_p_drop=unstable_p_drop,
+        unstable_p_correct=unstable_p_correct,
     )
     tracker = ReputationTracker(
         node_ids,
-        alpha=args.alpha,
-        min_confidence=args.min_confidence,
+        alpha=alpha,
+        min_confidence=min_confidence,
     )
-    logger = MetricsLogger(args.output)
+    logger = MetricsLogger(output if persist else None)
 
-    for round_index in range(args.rounds):
+    for round_index in range(rounds):
         task = tasks[round_index % len(tasks)]
         expected = normalize(task["answer"])
 
@@ -93,23 +106,44 @@ def run_simulation(args: argparse.Namespace) -> dict:
         )
 
     run_config = {
-        "nodes": args.nodes,
-        "malicious_frac": args.malicious,
-        "unstable_frac": args.unstable,
-        "rounds": args.rounds,
-        "alpha": args.alpha,
-        "min_confidence": args.min_confidence,
-        "seed": args.seed,
-        "honest_accuracy": args.honest_accuracy,
-        "collusion_value": args.collusion_value,
-        "unstable_p_drop": args.unstable_p_drop,
-        "unstable_p_correct": args.unstable_p_correct,
+        "nodes": len(profiles),
+        "rounds": rounds,
+        "alpha": alpha,
+        "min_confidence": min_confidence,
+        "seed": seed,
+        "honest_accuracy": honest_accuracy,
+        "collusion_value": collusion_value,
+        "unstable_p_drop": unstable_p_drop,
+        "unstable_p_correct": unstable_p_correct,
         "profiles": profiles,
         "reputation_uses_ground_truth": False,
         "eval_dataset": "gsm8k_sample_offline (nao usado para treinar o modelo)",
     }
     summary = logger.flush(run_config, tracker.weights(), profiles)
-    _print_summary(summary, args.output)
+    summary["reputation_history"] = {node_id: list(values) for node_id, values in tracker.history.items()}
+    summary["profiles"] = profiles
+    return summary
+
+
+def run_simulation(args: argparse.Namespace) -> dict:
+    profiles = getattr(args, "profiles", None) or build_profiles(
+        args.nodes, args.malicious, args.unstable
+    )
+    summary = execute_simulation(
+        profiles=profiles,
+        rounds=args.rounds,
+        seed=args.seed,
+        alpha=args.alpha,
+        min_confidence=args.min_confidence,
+        honest_accuracy=args.honest_accuracy,
+        collusion_value=args.collusion_value,
+        unstable_p_drop=args.unstable_p_drop,
+        unstable_p_correct=args.unstable_p_correct,
+        output=args.output,
+        persist=True,
+    )
+    printable = {k: v for k, v in summary.items() if k not in {"reputation_history", "profiles"}}
+    _print_summary(printable, args.output)
     return summary
 
 

@@ -46,9 +46,10 @@ ROUND_FIELDS = [
 
 
 class MetricsLogger:
-    def __init__(self, output_dir: str) -> None:
+    def __init__(self, output_dir: Optional[str] = None) -> None:
         self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
 
@@ -133,12 +134,14 @@ class MetricsLogger:
         final_reputations: dict[str, float],
         profiles: dict[str, str],
     ) -> dict:
-        _write_csv(os.path.join(self.output_dir, "per_node.csv"), PER_NODE_FIELDS, self.per_node_rows)
-        _write_csv(os.path.join(self.output_dir, "rounds.csv"), ROUND_FIELDS, self.round_rows)
+        if self.output_dir:
+            _write_csv(os.path.join(self.output_dir, "per_node.csv"), PER_NODE_FIELDS, self.per_node_rows)
+            _write_csv(os.path.join(self.output_dir, "rounds.csv"), ROUND_FIELDS, self.round_rows)
         summary = self.summary(final_reputations, profiles)
-        payload = {"config": config, "summary": summary}
-        with open(os.path.join(self.output_dir, "summary.json"), "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2, ensure_ascii=False)
+        if self.output_dir:
+            payload = {"config": config, "summary": summary}
+            with open(os.path.join(self.output_dir, "summary.json"), "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, indent=2, ensure_ascii=False)
         return summary
 
 
