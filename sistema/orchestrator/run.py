@@ -30,6 +30,7 @@ from ..core.answer import normalize
 from ..core.engine import process_round
 from ..core.metrics import MetricsLogger
 from ..core.reputation import MECHANISMS, ReputationTracker
+from ..core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from ..core.schemas import NodeResponse
 
 _DEFAULT_CONFIG = os.path.join(os.path.dirname(__file__), "..", "config", "experiment.yaml")
@@ -122,6 +123,8 @@ async def run_experiment(config: dict) -> dict:
         raise RuntimeError("Nenhuma tarefa carregada.")
 
     rounds = config.get("rounds") or len(tasks)
+    test_every = int(config.get("test_every", DEFAULT_TEST_EVERY))
+    planned_tests = test_rounds_1based(rounds, test_every)
     mode = config.get("mode", "simulation")
     timeout = float(config.get("timeout_s", 10))
     output_dir = config.get("output_dir", os.path.join("sistema", "results", "experimento"))
@@ -151,6 +154,7 @@ async def run_experiment(config: dict) -> dict:
             for round_index in range(rounds):
                 task = tasks[round_index % len(tasks)]
                 expected = normalize(task["answer"])
+                this_is_test = is_test_round(round_index, test_every)
 
                 responses: list[NodeResponse] = await asyncio.gather(
                     *(query_node(client, node, task, mode, timeout) for node in nodes)
@@ -163,13 +167,15 @@ async def run_experiment(config: dict) -> dict:
                     responses=list(responses),
                     tracker=tracker,
                     logger=logger,
+                    is_test=this_is_test,
                 )
-                _print_round(result)
+                _print_round(result, is_test=this_is_test)
     except BaseException:
         # CSVs incrementais já têm todas as rodadas concluídas; fecha os streams.
         logger.close()
         raise
 
+    config = {**config, "test_every": test_every, "test_rounds": planned_tests}
     summary = logger.flush(
         config,
         tracker,
@@ -184,21 +190,24 @@ async def run_experiment(config: dict) -> dict:
 # Output
 # ---------------------------------------------------------------------------
 
-def _print_round(result) -> None:
-    from ..core.schemas import RoundResult  # local import to avoid circularity
+def _print_round(result, is_test: bool = False) -> None:
     status = "OK " if result.consensus_correct else "ERR"
+    test_tag = " | TESTE" if is_test else ""
     print(
-        f"[{status}] rodada {result.round_index:>3} | tarefa {result.task_id} | "
+        f"[{status}] rodada {result.round_index + 1:>3} | tarefa {result.task_id} | "
         f"esperado={result.expected} | ponderado={result.consensus_weighted} | "
-        f"maioria={result.consensus_majority}"
+        f"maioria={result.consensus_majority}{test_tag}"
     )
 
 
 def _print_summary(summary: dict, output_dir: str) -> None:
     print(f"\n=== Resumo do experimento [{summary['experiment_id']}] ===")
     print(f"Rodadas: {summary['rounds']}")
-    print(f"Acurácia do consenso ponderado (reputação): {summary['consensus_accuracy_weighted']:.2%}")
-    print(f"Acurácia do consenso por maioria (base):     {summary['consensus_accuracy_majority']:.2%}")
+    print(f"Rodadas de teste: {summary.get('test_rounds', [])}")
+    print(f"Acurácia do consenso ponderado (todas as rodadas): {summary['consensus_accuracy_weighted']:.2%}")
+    print(f"Acurácia do consenso por maioria (todas as rodadas): {summary['consensus_accuracy_majority']:.2%}")
+    print(f"Acurácia do consenso ponderado (só testes): {summary.get('consensus_accuracy_weighted_on_tests', 0):.2%}")
+    print(f"Acurácia do consenso por maioria (só testes): {summary.get('consensus_accuracy_majority_on_tests', 0):.2%}")
     print(f"Tempo médio de resposta: {summary['mean_latency_ms']:.0f} ms")
     print("\nReputação final média por perfil:")
     for profile, value in sorted(summary["final_reputation_by_profile"].items()):

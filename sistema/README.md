@@ -91,6 +91,17 @@ $$r \leftarrow (1 - \alpha)\,r + \alpha\,s, \quad s = \begin{cases} 1 & \text{re
 O consenso ponderado soma a reputação dos nós que apontam cada resposta e escolhe
 a de maior peso; a reputação da rodada anterior é usada como peso da rodada atual.
 
+## Rodadas de teste
+
+A avaliação usa o mesmo calendário em todos os experimentos: **uma rodada de
+teste a cada 10 rodadas** (rodadas 10, 20, 30, 40 e 50, em numeração a partir
+de 1). A reputação continua sendo atualizada em todas as rodadas. O que fica
+fixo é o ponto em que a acurácia é medida.
+
+Cada teste é registrado em `rounds.csv` (`is_test=1`, coluna `test_round`) e
+no `summary.json` (`test_rounds` e `consensus_accuracy_*_on_tests`). Essas
+rodadas são as linhas verticais dos gráficos.
+
 ## Métricas geradas (`sistema/results/`)
 
 - `per_node.csv` — resposta, acerto, latência e reputação (antes/depois) por nó e rodada.

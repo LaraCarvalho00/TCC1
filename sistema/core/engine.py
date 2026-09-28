@@ -41,6 +41,7 @@ def process_round(
     responses: list[NodeResponse],
     tracker: ReputationTracker,
     logger: MetricsLogger,
+    is_test: bool = False,
 ) -> RoundResult:
     """Processa uma rodada completa após a coleta de respostas.
 
@@ -66,6 +67,10 @@ def process_round(
         Gerenciador de reputação; atualizado in-place.
     logger : MetricsLogger
         Registrador de métricas; linhas acumuladas in-place.
+    is_test : bool
+        ``True`` quando esta rodada é uma rodada de teste fixa
+        (uma a cada ``test_every`` rodadas). A reputação continua
+        sendo atualizada; o flag só marca o ponto de avaliação.
 
     Returns
     -------
@@ -152,6 +157,7 @@ def process_round(
             consensus_majority_correct=result.majority_correct,
             is_tie_weighted=cons_w.is_tie,
             is_tie_majority=cons_m.is_tie,
+            is_test=is_test,
         )
 
     # 6. Log da rodada.
@@ -167,6 +173,7 @@ def process_round(
         consensus_margin_majority=cons_m.margin,
         is_tie_weighted=cons_w.is_tie,
         is_tie_majority=cons_m.is_tie,
+        is_test=is_test,
     )
 
     return result

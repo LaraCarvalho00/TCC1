@@ -1,0 +1,120 @@
+% Estilo comum das figuras. A mesma cor e o mesmo marcador significam
+% sempre a mesma série. Carregue este arquivo depois de pgfplots.
+%
+% Mapa fixo:
+%   0% de maliciosos     azul, círculo, linha contínua
+%   25% de maliciosos    verde, triângulo, linha contínua
+%   50% de maliciosos    laranja, quadrado, linha tracejada
+%   65% de maliciosos    vermelho, estrela, linha pontilhada
+%   reputação maliciosa  o mesmo par da série de 65%
+%   maioria simples      cinza-escuro, losango, linha contínua
+%   reputação honesta    roxo, pentágono, linha contínua
+%   EMA assimétrica      marrom, otimes, linha tracejada
+%   Beta                 verde-azulado, oplus, linha traço-ponto
+%
+% A curva EMA do cenário de 65% reutiliza a série de 65%, porque é a mesma
+% curva da figura que compara os percentuais.
+%
+% Largura e altura: redefina \figw e \figh antes de cada eixo.
+
+\definecolor{serieZero}{RGB}{31,119,180}
+\definecolor{serieVinte}{RGB}{44,160,44}
+\definecolor{serieCinquenta}{RGB}{230,120,20}
+\definecolor{serieSessenta}{RGB}{200,30,30}
+\definecolor{serieMaioria}{RGB}{40,40,40}
+\definecolor{serieHonesto}{RGB}{106,90,205}
+\definecolor{serieAssimetrico}{RGB}{140,86,75}
+\definecolor{serieBeta}{RGB}{0,128,128}
+\definecolor{corTeste}{RGB}{130,130,130}
+
+\newcommand{\figw}{0.92\textwidth}
+\newcommand{\figh}{7.4cm}
+
+\pgfplotsset{
+  compat=1.18,
+  tcc linha/.style={
+    width=\figw,
+    height=\figh,
+    scale only axis,
+    font=\normalsize,
+    tick label style={font=\normalsize},
+    label style={font=\normalsize},
+    legend style={font=\normalsize},
+    xlabel={Rodada},
+    xmin=-1, xmax=53,
+    ymin=-0.08, ymax=1.10,
+    xtick={0,10,20,30,40,50},
+    ytick={0,0.2,0.4,0.6,0.8,1},
+    grid=major,
+    grid style={black!12},
+    clip=false,
+    axis line style={line width=0.6pt},
+    tick style={black, line width=0.6pt},
+    legend cell align=left,
+    legend columns=2,
+    legend style={
+      at={(0.5,-0.46)},
+      anchor=north,
+      draw=none,
+      fill=none,
+      font=\normalsize,
+      /tikz/every even column/.append style={column sep=1.1em},
+    },
+    every axis plot/.append style={
+      line width=1.15pt,
+      opacity=0.6,
+      mark size=2.6pt,
+      mark repeat=10,
+      % Índice 0-based: o ponto 9 é a rodada 10; depois, a cada 10 rodadas.
+      mark phase=9,
+      mark options={solid, opacity=1},
+    },
+  },
+  serie zero/.style={
+    color=serieZero, solid, mark=*,
+    mark options={solid, fill=serieZero, opacity=1},
+  },
+  serie vinte/.style={
+    color=serieVinte, solid, mark=triangle*,
+    mark options={solid, fill=serieVinte, opacity=1},
+  },
+  serie cinquenta/.style={
+    color=serieCinquenta, dashed, mark=square*,
+    mark options={solid, fill=serieCinquenta, opacity=1},
+  },
+  serie sessenta/.style={
+    color=serieSessenta, dotted, mark=star, mark size=3.5pt,
+    mark options={solid, fill=serieSessenta, opacity=1},
+  },
+  serie malicioso/.style={serie sessenta},
+  serie maioria/.style={
+    color=serieMaioria, solid, mark=diamond*,
+    mark options={solid, fill=serieMaioria, opacity=1},
+  },
+  serie honesto/.style={
+    color=serieHonesto, solid, mark=pentagon*,
+    mark options={solid, fill=serieHonesto, opacity=1},
+  },
+  serie ema assimetrica/.style={
+    color=serieAssimetrico, dashed, mark=otimes, mark size=3pt,
+    mark options={solid, opacity=1},
+  },
+  serie beta/.style={
+    color=serieBeta, dashdotted, mark=oplus, mark size=3pt,
+    mark options={solid, opacity=1},
+  },
+}
+
+% Linha vertical em cada rodada de teste. Usar dentro do eixo.
+\newcommand{\linhasDeTeste}{%
+  \pgfplotsinvokeforeach{10,20,30,40,50}{%
+    \draw[corTeste, dashed, line width=0.8pt]
+      ({rel axis cs:0,0} -| {axis cs:##1,0}) --
+      ({rel axis cs:0,1} -| {axis cs:##1,0});
+  }%
+}
+
+\newcommand{\legendaRodadaDeTeste}{%
+  \addlegendimage{corTeste, dashed, line width=0.8pt}%
+  \addlegendentry{Rodada de teste}%
+}

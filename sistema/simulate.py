@@ -27,6 +27,7 @@ from .core.answer import normalize
 from .core.engine import process_round
 from .core.metrics import MetricsLogger
 from .core.reputation import MECHANISMS, ReputationTracker
+from .core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from .core.schemas import NodeResponse
 
 _DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), "results", "simulacao")
@@ -95,14 +96,23 @@ def run_simulation(args: argparse.Namespace) -> dict:
     if experiment_id:
         output_dir = os.path.join(output_dir, experiment_id)
 
-    logger = MetricsLogger(output_dir, experiment_id=experiment_id, overwrite=overwrite)
+    test_every = int(getattr(args, "test_every", DEFAULT_TEST_EVERY))
+    planned_tests = test_rounds_1based(args.rounds, test_every)
+    logger = MetricsLogger(
+        output_dir,
+        experiment_id=experiment_id,
+        overwrite=overwrite,
+        row_sync=bool(getattr(args, "row_sync", True)),
+    )
 
     # Laço de rodadas.  Se interrompido, os CSVs incrementais (per_node.csv,
     # rounds.csv, reputation_history.csv) já contêm todas as rodadas concluídas.
+    # A rodada de teste é fixa: uma a cada `test_every` rodadas (10, 20, 30, …).
     try:
         for round_index in range(args.rounds):
             task = tasks[round_index % len(tasks)]
             expected = normalize(task["answer"])
+            this_is_test = is_test_round(round_index, test_every)
 
             responses: list[NodeResponse] = []
             for node_id in node_ids:
@@ -124,6 +134,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 responses=responses,
                 tracker=tracker,
                 logger=logger,
+                is_test=this_is_test,
             )
     except BaseException:
         logger.close()
@@ -144,9 +155,12 @@ def run_simulation(args: argparse.Namespace) -> dict:
         "alpha_down": alpha_down,
         "initial_reputation": initial,
         "profiles": profiles,
+        "test_every": test_every,
+        "test_rounds": planned_tests,
     }
     summary = logger.flush(run_config, tracker, profiles, seed=args.seed)
-    _print_summary(summary, profiles, logger.output_dir)
+    if not getattr(args, "quiet", False):
+        _print_summary(summary, profiles, logger.output_dir)
     return summary
 
 
@@ -157,8 +171,11 @@ def run_simulation(args: argparse.Namespace) -> dict:
 def _print_summary(summary: dict, profiles: dict[str, str], output_dir: str) -> None:
     print(f"\n=== Resumo da simulação [{summary['experiment_id']}] ===")
     print(f"Rodadas: {summary['rounds']}")
-    print(f"Acurácia do consenso ponderado (reputação): {summary['consensus_accuracy_weighted']:.2%}")
-    print(f"Acurácia do consenso por maioria (base):     {summary['consensus_accuracy_majority']:.2%}")
+    print(f"Rodadas de teste: {summary.get('test_rounds', [])}")
+    print(f"Acurácia do consenso ponderado (todas as rodadas): {summary['consensus_accuracy_weighted']:.2%}")
+    print(f"Acurácia do consenso por maioria (todas as rodadas): {summary['consensus_accuracy_majority']:.2%}")
+    print(f"Acurácia do consenso ponderado (só testes): {summary.get('consensus_accuracy_weighted_on_tests', 0):.2%}")
+    print(f"Acurácia do consenso por maioria (só testes): {summary.get('consensus_accuracy_majority_on_tests', 0):.2%}")
     print(f"Tempo médio de resposta: {summary['mean_latency_ms']:.0f} ms")
     print("\nReputação final média por perfil:")
     for profile, value in sorted(summary["final_reputation_by_profile"].items()):
@@ -176,6 +193,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--malicious", type=float, default=0.25, help="Fração de nós maliciosos.")
     parser.add_argument("--unstable", type=float, default=0.0, help="Fração de nós instáveis.")
     parser.add_argument("--rounds", type=int, default=10, help="Número de rodadas.")
+    parser.add_argument(
+        "--test-every", type=int, default=DEFAULT_TEST_EVERY, dest="test_every",
+        help="Uma rodada de teste a cada N rodadas (padrão: 10 → rodadas 10, 20, 30, …).",
+    )
     parser.add_argument("--alpha", type=float, default=0.3, help="Taxa de aprendizado (EMA).")
     parser.add_argument("--seed", type=int, default=42, help="Semente para reprodutibilidade.")
     parser.add_argument(
@@ -214,6 +235,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--overwrite", action="store_true", default=False,
         help="Sobrescrever diretório de saída se já existir.",
+    )
+    parser.add_argument(
+        "--no-row-sync", action="store_false", dest="row_sync", default=True,
+        help="Não sincroniza cada linha de CSV em disco (mais rápido em lote).",
     )
     return parser.parse_args(argv)
 

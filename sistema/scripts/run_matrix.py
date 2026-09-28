@@ -10,8 +10,11 @@ Por padrão:
     sementes   : 0 … 9  (10 repetições)
     mecanismos : ema, ema_asymmetric, beta
     conluio    : não (padrão) + sim (apenas para malicious > 0)
+    teste      : uma rodada de teste a cada 10 rodadas (10, 20, 30, 40, 50)
 
-Total padrão: 4 × 3 × 10 × 3 × ~1.5 ≈ 540 execuções, cada uma com 50 rodadas.
+A fração 0,65 entra na grade para o cenário de cerca de 65% de nós maliciosos.
+Os resultados desta rodada ficam em ``sistema/results/matrix_testes_fixos/``
+e não substituem execuções anteriores.
 Tempo estimado em simulação local: ~2–4 min no total.
 
 Uso::
@@ -28,13 +31,13 @@ Uso::
 
 Saída::
 
-    sistema/results/matrix/<experiment_id>/
+    sistema/results/matrix_testes_fixos/<experiment_id>/
         per_node.csv
         rounds.csv
         reputation_history.csv
         summary.json
         manifest.json
-    sistema/results/matrix/matrix_index.csv   # índice de todos os experimentos
+    sistema/results/matrix_testes_fixos/matrix_index.csv
 """
 from __future__ import annotations
 
@@ -52,9 +55,10 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from sistema.core.reputation import MECHANISMS
-from sistema.simulate import parse_args as _sim_parse_args, run_simulation
+from sistema.core.schedule import DEFAULT_TEST_EVERY, test_rounds_1based
+from sistema.simulate import run_simulation
 
-_BASE_OUTPUT = os.path.join(os.path.dirname(__file__), "..", "results", "matrix")
+_BASE_OUTPUT = os.path.join(os.path.dirname(__file__), "..", "results", "matrix_testes_fixos")
 _INDEX_FILE = os.path.join(_BASE_OUTPUT, "matrix_index.csv")
 
 INDEX_FIELDS = [
@@ -69,8 +73,14 @@ INDEX_FIELDS = [
     "rounds",
     "alpha",
     "honest_accuracy",
+    "test_every",
+    "test_rounds",
+    "n_malicious",
+    "malicious_pct_actual",
     "consensus_accuracy_weighted",
     "consensus_accuracy_majority",
+    "consensus_accuracy_weighted_on_tests",
+    "consensus_accuracy_majority_on_tests",
     "final_rep_honest",
     "final_rep_malicious",
     "final_rep_unstable",
@@ -95,6 +105,7 @@ def build_grid(
     alpha: float,
     honest_accuracy: float,
     collusion_value: int,
+    test_every: int,
 ) -> list[dict]:
     """Retorna a lista de configurações a executar."""
     grid = []
@@ -113,6 +124,7 @@ def build_grid(
                         rounds=rounds,
                         alpha=alpha,
                         honest_accuracy=honest_accuracy,
+                        test_every=test_every,
                     ))
                     # Variante com conluio (apenas quando há maliciosos).
                     if with_collusion and mal_frac > 0:
@@ -126,6 +138,7 @@ def build_grid(
                             rounds=rounds,
                             alpha=alpha,
                             honest_accuracy=honest_accuracy,
+                            test_every=test_every,
                         ))
     return grid
 
@@ -136,6 +149,7 @@ def _experiment_id(cfg: dict) -> str:
     return (
         f"mat_n{cfg['nodes']}_m{mal_pct:02d}"
         f"_s{cfg['seed']:02d}_{cfg['mechanism']}{collusion_tag}"
+        f"_t{int(cfg.get('test_every', DEFAULT_TEST_EVERY)):02d}"
     )
 
 
@@ -181,6 +195,9 @@ def _run_one(cfg: dict, base_output: str, dry_run: bool) -> Optional[dict]:
         output=base_output,
         experiment_id=exp_id,
         overwrite=False,
+        test_every=cfg.get("test_every", DEFAULT_TEST_EVERY),
+        row_sync=False,
+        quiet=True,
     )
 
     t0 = time.perf_counter()
@@ -209,12 +226,22 @@ def _index_row(result: dict) -> dict:
     summ = result.get("summary", {})
     final_rep = summ.get("final_reputation_by_profile", {})
     mean_rep = summ.get("mean_reputation_by_profile_across_rounds", {})
-    mal_pct = int(round(cfg.get("malicious_frac", 0) * 100))
+    nodes = int(cfg.get("nodes", 0) or 0)
+    mal_frac = float(cfg.get("malicious_frac", 0) or 0)
+    n_malicious = int(round(mal_frac * nodes)) if nodes else 0
+    mal_pct_actual = round(100.0 * n_malicious / nodes, 2) if nodes else 0
+    mal_pct = int(round(mal_frac * 100))
+    test_rounds = summ.get("test_rounds") or test_rounds_1based(
+        int(cfg.get("rounds", 0) or 0),
+        int(cfg.get("test_every", DEFAULT_TEST_EVERY)),
+    )
     return {
         "experiment_id": result.get("exp_id", ""),
         "nodes": cfg.get("nodes", ""),
         "malicious_frac": cfg.get("malicious_frac", ""),
         "malicious_pct": mal_pct,
+        "n_malicious": n_malicious,
+        "malicious_pct_actual": mal_pct_actual,
         "seed": cfg.get("seed", ""),
         "mechanism": cfg.get("mechanism", ""),
         "collusion": int(cfg.get("collusion", False)),
@@ -222,8 +249,12 @@ def _index_row(result: dict) -> dict:
         "rounds": cfg.get("rounds", ""),
         "alpha": cfg.get("alpha", ""),
         "honest_accuracy": cfg.get("honest_accuracy", ""),
+        "test_every": cfg.get("test_every", DEFAULT_TEST_EVERY),
+        "test_rounds": "|".join(str(r) for r in test_rounds),
         "consensus_accuracy_weighted": summ.get("consensus_accuracy_weighted", ""),
         "consensus_accuracy_majority": summ.get("consensus_accuracy_majority", ""),
+        "consensus_accuracy_weighted_on_tests": summ.get("consensus_accuracy_weighted_on_tests", ""),
+        "consensus_accuracy_majority_on_tests": summ.get("consensus_accuracy_majority_on_tests", ""),
         "final_rep_honest": final_rep.get("honest", ""),
         "final_rep_malicious": final_rep.get("malicious", ""),
         "final_rep_unstable": final_rep.get("unstable", ""),
@@ -255,8 +286,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Tamanhos de rede a testar.",
     )
     parser.add_argument(
-        "--malicious", type=float, nargs="+", default=[0.0, 0.25, 0.5],
-        help="Frações de nós maliciosos.",
+        "--malicious", type=float, nargs="+", default=[0.0, 0.25, 0.5, 0.65],
+        help="Frações nominais de nós maliciosos. 0.65 cobre o cenário de cerca de 65%.",
     )
     parser.add_argument(
         "--seeds", type=int, default=10,
@@ -269,6 +300,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--rounds", type=int, default=50,
         help="Rodadas por experimento.",
+    )
+    parser.add_argument(
+        "--test-every", type=int, default=DEFAULT_TEST_EVERY, dest="test_every",
+        help="Uma rodada de teste a cada N rodadas (igual em todos os experimentos).",
     )
     parser.add_argument(
         "--alpha", type=float, default=0.3,
@@ -311,6 +346,7 @@ def main(argv: list[str] | None = None) -> None:
         alpha=args.alpha,
         honest_accuracy=args.honest_accuracy,
         collusion_value=args.collusion_value,
+        test_every=args.test_every,
     )
 
     total = len(grid)
@@ -331,8 +367,8 @@ def main(argv: list[str] | None = None) -> None:
             row = _index_row(result)
             index_rows.append(row)
             elapsed = result.get("elapsed_s", 0.0)
-            acc_w = result.get("summary", {}).get("consensus_accuracy_weighted", "?")
-            print(f"OK {elapsed:.1f}s  acc_weighted={acc_w}")
+            acc_w = result.get("summary", {}).get("consensus_accuracy_weighted_on_tests", "?")
+            print(f"OK {elapsed:.1f}s  acc_testes={acc_w}")
         else:
             print("✗")
 

@@ -11,6 +11,7 @@ num_tasks: 10          # limita o nº de tarefas carregadas (null = todas)
 split: test            # usado apenas quando dataset = gsm8k
 
 rounds: 20             # nº de rodadas (null = uma por tarefa)
+test_every: 10         # uma rodada de teste a cada 10 rodadas (10, 20, …)
 alpha: 0.3             # taxa de aprendizado da reputação (EMA)
 timeout_s: 10          # tempo máximo de espera por nó (detecta instabilidade)
 output_dir: sistema/results/experimento

@@ -108,3 +108,13 @@ acurácia agregada, taxa de consenso correto, tempo médio de resposta e evoluç
 - [ ] Rodar a rede em containers (`docker compose up`) e coletar métricas em modo `mock`.
 - [ ] Decidir se nós instáveis serão categoria distinta ou agrupados com maliciosos na v1.
 - [ ] Avaliar necessidade de VM para executar múltiplos nós com o modelo real.
+
+---
+
+## Orientação de 26/09/2026 — rodadas de teste fixas
+
+A rodada de avaliação deixou de ser indefinida. Em todos os experimentos há um teste a cada 10 rodadas (10, 20, 30, 40 e 50). Cada teste fica em `rounds.csv` (`is_test`, `test_round`) e no `summary.json`.
+
+A matriz foi reexecutada em `sistema/results/matrix_testes_fixos/` (840 execuções). Os gráficos em LaTeX e a leitura dos números estão em `sistema/resultados/rodadas_teste_fixas/`. As execuções anteriores não foram apagadas.
+
+Outras topologias, além da estrela, continuam para o próximo ciclo.

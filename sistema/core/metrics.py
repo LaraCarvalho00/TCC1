@@ -71,6 +71,7 @@ PER_NODE_FIELDS = [
     "consensus_majority_correct",
     "is_tie_weighted",
     "is_tie_majority",
+    "is_test",           # 1 se a rodada é um teste fixo
 ]
 
 ROUND_FIELDS = [
@@ -95,6 +96,8 @@ ROUND_FIELDS = [
     "consensus_margin_majority",
     "is_tie_weighted",
     "is_tie_majority",
+    "is_test",               # 1 se esta rodada é um teste
+    "test_round",            # número 1-based da rodada, vazio quando não é teste
 ]
 
 HISTORY_FIELDS = [
@@ -120,9 +123,13 @@ class MetricsLogger:
         diretório já existir, levanta :class:`FileExistsError`.
     experiment_id : str, optional
         Identificador único do experimento.  Auto-gerado se não informado.
-    overwrite : bool
+        overwrite : bool
         Se ``True``, escreve mesmo que o diretório já exista.  Use apenas
         para compatibilidade com execuções Docker onde o volume é pré-criado.
+    row_sync : bool
+        Se ``True`` (padrão), cada linha de CSV é sincronizada em disco.
+        A matriz de experimentos pode desligar isso para acelerar o lote;
+        o fechamento do arquivo ainda descarrega o buffer.
     """
 
     def __init__(
@@ -130,6 +137,7 @@ class MetricsLogger:
         output_dir: str,
         experiment_id: Optional[str] = None,
         overwrite: bool = False,
+        row_sync: bool = True,
     ) -> None:
         if not overwrite and os.path.exists(output_dir):
             raise FileExistsError(
@@ -147,13 +155,13 @@ class MetricsLogger:
         # cada linha assim que a rodada é processada, sincronizando em disco.
         # Assim nenhuma rodada já concluída se perde numa interrupção.
         self._per_node_stream = _CsvStream(
-            os.path.join(output_dir, "per_node.csv"), PER_NODE_FIELDS
+            os.path.join(output_dir, "per_node.csv"), PER_NODE_FIELDS, sync=row_sync
         )
         self._round_stream = _CsvStream(
-            os.path.join(output_dir, "rounds.csv"), ROUND_FIELDS
+            os.path.join(output_dir, "rounds.csv"), ROUND_FIELDS, sync=row_sync
         )
         self._history_stream = _CsvStream(
-            os.path.join(output_dir, "reputation_history.csv"), HISTORY_FIELDS
+            os.path.join(output_dir, "reputation_history.csv"), HISTORY_FIELDS, sync=row_sync
         )
         # Nós cujo checkpoint 0 (reputação inicial) já foi escrito no histórico.
         self._history_seed_written: set[str] = set()
@@ -183,6 +191,7 @@ class MetricsLogger:
         consensus_majority_correct: bool,
         is_tie_weighted: bool,
         is_tie_majority: bool,
+        is_test: bool = False,
     ) -> None:
         row = {
             "experiment_id": self.experiment_id,
@@ -216,6 +225,7 @@ class MetricsLogger:
             "consensus_majority_correct": int(consensus_majority_correct),
             "is_tie_weighted": int(is_tie_weighted),
             "is_tie_majority": int(is_tie_majority),
+            "is_test": int(is_test),
         }
         self.per_node_rows.append(row)
         self._per_node_stream.write(row)
@@ -254,6 +264,7 @@ class MetricsLogger:
         consensus_margin_majority: float,
         is_tie_weighted: bool,
         is_tie_majority: bool,
+        is_test: bool = False,
     ) -> None:
         latencies = [r.latency_ms for r in result.responses if r.answer is not None]
         mean_latency = round(statistics.mean(latencies), 1) if latencies else 0.0
@@ -285,6 +296,8 @@ class MetricsLogger:
             "consensus_margin_majority": round(consensus_margin_majority, 6),
             "is_tie_weighted": int(is_tie_weighted),
             "is_tie_majority": int(is_tie_majority),
+            "is_test": int(is_test),
+            "test_round": (result.round_index + 1) if is_test else "",
         }
         self.round_rows.append(row)
         self._round_stream.write(row)
@@ -299,6 +312,9 @@ class MetricsLogger:
         rounds = len(self.round_rows)
         consensus_correct = sum(r["consensus_correct"] for r in self.round_rows)
         majority_correct = sum(r["majority_correct"] for r in self.round_rows)
+        test_rows = [r for r in self.round_rows if int(r.get("is_test", 0)) == 1]
+        test_weighted = sum(r["consensus_correct"] for r in test_rows)
+        test_majority = sum(r["majority_correct"] for r in test_rows)
         latencies = [r["latency_ms"] for r in self.per_node_rows if r["answered"]]
 
         # Reputação final por perfil (instantâneo)
@@ -325,6 +341,18 @@ class MetricsLogger:
             "rounds": rounds,
             "consensus_accuracy_weighted": _ratio(consensus_correct, rounds),
             "consensus_accuracy_majority": _ratio(majority_correct, rounds),
+            "test_rounds": [int(r["test_round"]) for r in test_rows],
+            "n_test_rounds": len(test_rows),
+            "consensus_accuracy_weighted_on_tests": _ratio(test_weighted, len(test_rows)),
+            "consensus_accuracy_majority_on_tests": _ratio(test_majority, len(test_rows)),
+            "tests": [
+                {
+                    "round": int(r["test_round"]),
+                    "consensus_weighted_correct": int(r["consensus_correct"]),
+                    "consensus_majority_correct": int(r["majority_correct"]),
+                }
+                for r in test_rows
+            ],
             "mean_latency_ms": round(statistics.mean(latencies), 1) if latencies else 0.0,
             "final_reputation_by_profile": mean_rep_final,
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
@@ -395,8 +423,9 @@ class _CsvStream:
     perca as rodadas já processadas.
     """
 
-    def __init__(self, path: str, fieldnames: list[str]) -> None:
+    def __init__(self, path: str, fieldnames: list[str], sync: bool = True) -> None:
         self.path = path
+        self._sync_each = sync
         self._fh = open(path, "w", newline="", encoding="utf-8")
         self._writer = csv.DictWriter(self._fh, fieldnames=fieldnames)
         self._writer.writeheader()
@@ -408,6 +437,8 @@ class _CsvStream:
 
     def _sync(self) -> None:
         self._fh.flush()
+        if not self._sync_each:
+            return
         try:
             os.fsync(self._fh.fileno())
         except (OSError, ValueError):

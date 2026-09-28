@@ -1,0 +1,2 @@
+nos,maliciosos_pct,maliciosos_reais,n_maliciosos,conluio,mecanismo,n_sementes,intervalo_teste,rodadas_teste,acuracia_ponderada_teste,acuracia_maioria_teste
+15,65,66.67,10,0,ema,10,10,10|20|30|40|50,1.0000,0.9200
