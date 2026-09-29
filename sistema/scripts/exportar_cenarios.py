@@ -19,6 +19,8 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
+from sistema.scripts.result_data import final_reputation_rows, validation_rounds
+
 _DEFAULT_MATRIX = os.path.join(
     os.path.dirname(__file__), "..", "results", "matriz_reexecucao"
 )
@@ -149,7 +151,8 @@ def export(matrix_dir: str, out_dir: str) -> None:
         for run in runs:
             folder = run["output_dir"]
             rounds = _read_csv(os.path.join(folder, "rounds.csv"))
-            nodes = _read_csv(os.path.join(folder, "per_node.csv"))
+            nodes = final_reputation_rows(folder)
+            actual_validation_rounds = validation_rounds(folder)
             honest: dict[int, list[float]] = defaultdict(list)
             malicious: dict[int, list[float]] = defaultdict(list)
             for record in nodes:
@@ -171,7 +174,8 @@ def export(matrix_dir: str, out_dir: str) -> None:
                     rep_h[rodada].append(_mean(honest[rodada]))
                 if malicious[rodada]:
                     rep_mal[rodada].append(_mean(malicious[rodada]))
-                if str(record.get("is_test", "0")) == "1":
+                if ((actual_validation_rounds is None and str(record.get("is_test", "0")) == "1")
+                        or (actual_validation_rounds is not None and rodada in actual_validation_rounds)):
                     marcada = int(record["test_round"])
                     seed_tests.append(marcada)
                     test_rounds_seen.add(marcada)
@@ -230,8 +234,7 @@ def export(matrix_dir: str, out_dir: str) -> None:
     _write_csv(os.path.join(out_dir, "acuracia_teste.csv"), TESTE_FIELDS, teste_rows)
     _write_analise(out_dir, teste_rows, round_rows_by_name)
 
-    esperado = (10, 20, 30, 40, 50)
-    if intervalos != {"10"} or calendarios != {esperado}:
+    if len(intervalos) != 1 or len(calendarios) != 1:
         raise SystemExit(
             f"Calendário inesperado: intervalos={sorted(intervalos)} calendarios={calendarios}"
         )
@@ -258,6 +261,7 @@ def export(matrix_dir: str, out_dir: str) -> None:
 def _write_analise(out_dir: str, teste_rows: list[dict], por_rodada: dict[str, list[dict]]) -> None:
     analise = os.path.join(out_dir, "analise")
     os.makedirs(analise, exist_ok=True)
+    calendar = sorted({int(n) for row in teste_rows for n in row["rodadas_teste"].split("|") if n})
 
     lado: dict[tuple, dict] = {}
     for row in teste_rows:
@@ -298,7 +302,7 @@ def _write_analise(out_dir: str, teste_rows: list[dict], por_rodada: dict[str, l
     checkpoints = []
     for name, linhas in sorted(por_rodada.items()):
         for linha in linhas:
-            if int(linha["rodada"]) not in (10, 20, 30, 40, 50):
+            if int(linha["rodada"]) not in calendar:
                 continue
             checkpoints.append({
                 "cenario": name,
@@ -315,7 +319,7 @@ def _write_analise(out_dir: str, teste_rows: list[dict], por_rodada: dict[str, l
                 "reputacao_maliciosa": linha["reputacao_maliciosa"],
             })
     _write_csv(
-        os.path.join(analise, "rodadas_10_20_30_40_50.csv"),
+        os.path.join(analise, "rodadas_" + ("_".join(map(str, calendar)) or "sem_validacao") + ".csv"),
         [
             "cenario",
             "nos",
@@ -341,7 +345,7 @@ def _write_analise(out_dir: str, teste_rows: list[dict], por_rodada: dict[str, l
         por_teste = {
             int(linha["rodada"]): linha
             for linha in por_rodada[nome]
-            if int(linha["rodada"]) in (10, 20, 30, 40, 50)
+            if int(linha["rodada"]) in calendar
         }
         registro = {
             "nos": row["nos"],
@@ -351,9 +355,9 @@ def _write_analise(out_dir: str, teste_rows: list[dict], por_rodada: dict[str, l
             "acuracia_ponderada_teste": row["acuracia_ponderada_teste"],
             "acuracia_maioria_teste": row["acuracia_maioria_teste"],
         }
-        for rodada in (10, 20, 30, 40, 50):
-            registro[f"ponderado_r{rodada}"] = por_teste[rodada]["acuracia_ponderada"]
-            registro[f"maioria_r{rodada}"] = por_teste[rodada]["acuracia_maioria"]
+        for rodada in calendar:
+            registro[f"ponderado_r{rodada}"] = por_teste.get(rodada, {}).get("acuracia_ponderada", "")
+            registro[f"maioria_r{rodada}"] = por_teste.get(rodada, {}).get("acuracia_maioria", "")
         sessenta.append(registro)
     campos = [
         "nos",
@@ -363,7 +367,7 @@ def _write_analise(out_dir: str, teste_rows: list[dict], por_rodada: dict[str, l
         "acuracia_ponderada_teste",
         "acuracia_maioria_teste",
     ]
-    for rodada in (10, 20, 30, 40, 50):
+    for rodada in calendar:
         campos.extend([f"ponderado_r{rodada}", f"maioria_r{rodada}"])
     _write_csv(os.path.join(analise, "cenario_65_conluio.csv"), campos, sessenta)
 

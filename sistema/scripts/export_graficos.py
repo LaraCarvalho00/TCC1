@@ -171,6 +171,12 @@ def export(matrix_dir: str, out_dir: str) -> None:
     index = _read_csv(index_path)
     if not index:
         raise SystemExit(f"Índice vazio: {index_path}")
+    if "validation_enabled" in index[0]:
+        # O texto analítico legado descreve outro método. Não reutilizá-lo
+        # como conclusão automática para os experimentos com validação.
+        from sistema.scripts.export_validacao import export as export_validation
+        export_validation(matrix_dir, out_dir)
+        return
 
     os.makedirs(out_dir, exist_ok=True)
 

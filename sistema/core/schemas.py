@@ -13,8 +13,8 @@ Answer = Union[int, float]
 class Task:
     """Tarefa distribuída aos nós.
 
-    ``expected`` só é preenchido em modo de simulação, para os nós fabricarem
-    o comportamento do perfil. No processo real ele nunca é enviado aos nós.
+    ``expected`` é metadado interno do avaliador/simulador. Não faz parte
+    do payload HTTP enviado aos nós.
     """
 
     id: str

@@ -1,0 +1,29 @@
+% Acurácia do consenso ponderado por mecanismo, 65% em conluio, 20 nós.
+% EMA reutiliza a série de 65% (vermelho, pontilhado, estrela): é a mesma
+% curva da figura que compara os percentuais.
+% Ajuste \figw e \figh abaixo.
+
+\renewcommand{\figw}{0.90\textwidth}
+\renewcommand{\figh}{7.4cm}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}]
+  \linhasDeTeste
+  \addplot[serie sessenta] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m65_com_ema.csv};
+  \addlegendentry{EMA}
+  \addplot[serie ema assimetrica] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m65_com_ema_asymmetric.csv};
+  \addlegendentry{EMA assimétrica}
+  \addplot[serie beta] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m65_com_beta.csv};
+  \addlegendentry{Beta}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia do consenso ponderado por mecanismo de reputação.
+65\% de nós maliciosos em conluio, 20 nós. Média entre as sementes.}
+\label{fig:mecanismos-65}
+\end{figure}

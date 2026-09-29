@@ -20,10 +20,10 @@ import random
 import time
 from typing import Optional
 
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, ConfigDict
 
-from ..core import behavior
+from ..core import behavior, dataset
 from ..core.answer import Answer, normalize
 from .inference import MockBackend, ModelBackend
 
@@ -49,14 +49,15 @@ _config = behavior.BehaviorConfig(
 _rng = random.Random(SEED)
 _mock_backend = MockBackend(_config, _rng)
 _model_backend: Optional[ModelBackend] = None
+_mock_answers = {row["id"]: row for row in dataset.load_sample()}
 
 app = FastAPI(title=f"Node {NODE_ID}", version="1.0")
 
 
 class InferRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     task_id: str
     question: str
-    expected: Optional[float] = None  # preenchido apenas em modo simulação
 
 
 class InferResponse(BaseModel):
@@ -86,7 +87,10 @@ async def infer(request: InferRequest) -> InferResponse:
 
 async def _run_inference(request: InferRequest) -> tuple[Optional[Answer], int]:
     if INFERENCE_MODE == "mock":
-        answer, latency = _mock_backend.solve(PROFILE, request.question, normalize(request.expected))
+        fixture = _mock_answers.get(request.task_id)
+        if fixture is None or fixture["question"] != request.question:
+            raise HTTPException(status_code=422, detail="Mock aceita apenas tarefas da amostra offline.")
+        answer, latency = _mock_backend.solve(PROFILE, request.question, normalize(fixture["answer"]))
         await _sleep_ms(latency)
         return answer, latency
 

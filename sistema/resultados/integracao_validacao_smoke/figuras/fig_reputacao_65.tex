@@ -1,0 +1,25 @@
+% Reputação média de honestos e maliciosos, 65% em conluio.
+% 20 nós, EMA. A reputação dos maliciosos é vermelha, pontilhada, com estrela.
+% Ajuste \figw e \figh abaixo.
+
+\renewcommand{\figw}{0.88\textwidth}
+\renewcommand{\figh}{7.2cm}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação média}]
+  \linhasDeTeste
+  \addplot[serie honesto] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/n20_m65_com_ema.csv};
+  \addlegendentry{Honestos}
+  \addplot[serie malicioso] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/n20_m65_com_ema.csv};
+  \addlegendentry{Maliciosos}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós honestos e dos nós maliciosos por rodada.
+65\% de nós maliciosos em conluio, 20 nós, EMA. Média entre as sementes.}
+\label{fig:reputacao-65}
+\end{figure}

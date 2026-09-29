@@ -50,7 +50,7 @@ def process_round(
     2. Consenso ponderado e por maioria, com desempate neutro.
     3. Construção do :class:`RoundResult`.
     4. Cálculo das métricas de dispersão das respostas.
-    5. Atualização de reputação e log por nó.
+    5. Atualização por concordância observável (sem gabarito) e log por nó.
     6. Log da rodada.
 
     Parameters
@@ -84,6 +84,9 @@ def process_round(
     pairs = [(r.node_id, r.answer) for r in responses]
     cons_w = weighted_consensus(pairs, weights_before)
     cons_m = majority_consensus(pairs)
+    total_weight = sum(cons_w.scores.values())
+    confidence = cons_w.scores.get(cons_w.answer, 0.0) / total_weight if total_weight > 0 else 0.0
+    reference = cons_w.answer if total_weight > 0 and not cons_w.is_tie else None
 
     # 3. RoundResult.
     result = RoundResult(
@@ -122,7 +125,9 @@ def process_round(
     for response in responses:
         correct = response.answer is not None and response.answer == expected
         weight_used = weights_before.get(response.node_id, tracker.initial)
-        rep_update = tracker.update(response.node_id, correct)
+        signal = tracker.signal(normalize(response.answer), reference, confidence)
+        rep_update = (tracker.hold(response.node_id) if signal is None
+                      else tracker.update(response.node_id, signal))
 
         # Erros absoluto e relativo (observacionais, não usados no score).
         abs_error: Optional[float] = None
@@ -158,6 +163,8 @@ def process_round(
             is_tie_weighted=cons_w.is_tie,
             is_tie_majority=cons_m.is_tie,
             is_test=is_test,
+            reputation_signal=signal,
+            consensus_confidence=confidence,
         )
 
     # 6. Log da rodada.

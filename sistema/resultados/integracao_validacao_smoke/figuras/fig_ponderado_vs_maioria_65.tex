@@ -1,0 +1,26 @@
+% Consenso ponderado e maioria simples, 65% de maliciosos em conluio.
+% 20 nós (13/20 = 65%), EMA.
+% A curva ponderada é a série de 65%: vermelho, pontilhada, estrela.
+% Ajuste \figw e \figh abaixo.
+
+\renewcommand{\figw}{0.88\textwidth}
+\renewcommand{\figh}{7.2cm}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}]
+  \linhasDeTeste
+  \addplot[serie sessenta] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m65_com_ema.csv};
+  \addlegendentry{Ponderado}
+  \addplot[serie maioria] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/n20_m65_com_ema.csv};
+  \addlegendentry{Maioria simples}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Consenso ponderado e maioria simples por rodada.
+65\% de nós maliciosos em conluio, 20 nós, EMA. Média entre as sementes.}
+\label{fig:ponderado-vs-maioria-65}
+\end{figure}

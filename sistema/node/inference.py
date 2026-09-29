@@ -22,7 +22,7 @@ _PROMPT_TEMPLATE = (
 
 
 class MockBackend:
-    """Gera respostas simuladas por perfil (usa o gabarito recebido na tarefa)."""
+    """Gera respostas simuladas a partir de uma fixture local, sem gabarito no HTTP."""
 
     def __init__(self, config: behavior.BehaviorConfig, rng: random.Random) -> None:
         self.config = config

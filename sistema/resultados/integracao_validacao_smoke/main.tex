@@ -1,0 +1,17 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2cm]{geometry}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\usetikzlibrary{calc}
+\input{figuras/estilo_figuras.tex}
+\begin{document}
+\section*{Validação por dataset}
+Simulação com respostas fabricadas; não representa execução da LLM. Acurácia do consenso medida antes da validação; reputação medida depois. As linhas verticais indicam validações concluídas.
+\input{figuras/fig_acuracia_ponderada_com_conluio.tex}
+\input{figuras/fig_acuracia_ponderada_sem_conluio.tex}
+\input{figuras/fig_mecanismos_65.tex}
+\input{figuras/fig_ponderado_vs_maioria_65.tex}
+\input{figuras/fig_reputacao_65.tex}
+\end{document}

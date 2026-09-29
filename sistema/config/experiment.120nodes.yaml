@@ -4,6 +4,9 @@ num_tasks: 10
 split: test
 rounds: 50
 test_every: 10
+validation_enabled: true
+validation_questions: 2
+min_confidence: 0.55
 alpha: 0.3
 timeout_s: 10.0
 output_dir: sistema/results/docker_120nodes

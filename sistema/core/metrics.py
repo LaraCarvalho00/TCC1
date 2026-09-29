@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 PER_NODE_FIELDS = [
+    "reputation_signal", "consensus_confidence", "update_reason",
     "experiment_id",
     "round_index",
     "task_id",
@@ -108,6 +109,12 @@ HISTORY_FIELDS = [
     "reputation",
 ]
 
+VALIDATION_UPDATE_FIELDS = [
+    "experiment_id", "round_number", "round_id", "node_id", "profile",
+    "question_id", "outcome", "reputation_before", "reputation_after",
+    "delta", "reward", "punishment", "alpha_used", "mechanism",
+]
+
 
 # ---------------------------------------------------------------------------
 # Logger
@@ -139,6 +146,8 @@ class MetricsLogger:
         overwrite: bool = False,
         row_sync: bool = True,
     ) -> None:
+        if os.path.exists(os.path.join(output_dir, "validation_rounds.jsonl")):
+            raise FileExistsError("Resultados de validação existentes: use outra pasta/experiment_id.")
         if not overwrite and os.path.exists(output_dir):
             raise FileExistsError(
                 f"Diretório já existe: {output_dir!r}. "
@@ -149,6 +158,8 @@ class MetricsLogger:
         self.experiment_id = experiment_id or _generate_id()
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
+        self.validation_rounds: dict[str, dict] = {}
+        self.validation_node_stats: dict[str, dict] = {}
 
         # --- Gravação incremental --------------------------------------
         # Abrimos os três CSVs de série temporal já no início e escrevemos
@@ -162,6 +173,10 @@ class MetricsLogger:
         )
         self._history_stream = _CsvStream(
             os.path.join(output_dir, "reputation_history.csv"), HISTORY_FIELDS, sync=row_sync
+        )
+        self._validation_stream = _CsvStream(
+            os.path.join(output_dir, "validation_updates.csv"),
+            VALIDATION_UPDATE_FIELDS, sync=row_sync,
         )
         # Nós cujo checkpoint 0 (reputação inicial) já foi escrito no histórico.
         self._history_seed_written: set[str] = set()
@@ -192,8 +207,13 @@ class MetricsLogger:
         is_tie_weighted: bool,
         is_tie_majority: bool,
         is_test: bool = False,
+        reputation_signal: Optional[bool] = None,
+        consensus_confidence: float = 0.0,
     ) -> None:
         row = {
+            "reputation_signal": "" if reputation_signal is None else int(reputation_signal),
+            "consensus_confidence": round(consensus_confidence, 6),
+            "update_reason": "NORMAL_TASK",
             "experiment_id": self.experiment_id,
             "round_index": round_index,
             "task_id": task_id,
@@ -241,13 +261,34 @@ class MetricsLogger:
                 "reputation": round(rep_update.score_before, 6),
             })
             self._history_seed_written.add(node_id)
-        self._history_stream.write({
-            "experiment_id": self.experiment_id,
-            "node_id": node_id,
-            "profile": profile,
-            "checkpoint": round_index + 1,
-            "reputation": round(rep_update.score_after, 6),
+
+    def finish_round(self, round_index: int, tracker, profiles: dict[str, str]) -> None:
+        """Checkpoint depois da tarefa E da eventual validação."""
+        for node_id, reputation in tracker.weights().items():
+            self._history_stream.write({
+                "experiment_id": self.experiment_id, "node_id": node_id,
+                "profile": profiles[node_id], "checkpoint": round_index + 1,
+                "reputation": round(reputation, 6),
+            })
+
+    def record_validation_update(self, round_, node, question, outcome, update) -> None:
+        self._validation_stream.write({
+            "experiment_id": self.experiment_id, "round_number": round_.round_number,
+            "round_id": round_.id, "node_id": node.node_id, "profile": node.profile,
+            "question_id": question.question_id, "outcome": outcome,
+            "reputation_before": update.score_before, "reputation_after": update.score_after,
+            "delta": update.delta, "reward": update.reward, "punishment": update.punishment,
+            "alpha_used": update.alpha_used, "mechanism": update.mechanism,
         })
+
+    def record_validation(self, round_, stats) -> None:
+        self.validation_rounds[round_.id] = dict(round_.__dict__)
+        self.validation_node_stats = {
+            node_id: {"correct": acc.total_correct, "incorrect": acc.total_incorrect,
+                      "evaluated": acc.total_evaluated,
+                      "accuracy": acc.accuracy if acc.total_evaluated else None}
+            for node_id, acc in stats.by_node.items()
+        }
 
     # ------------------------------------------------------------------
     def record_round(
@@ -357,8 +398,19 @@ class MetricsLogger:
             "final_reputation_by_profile": mean_rep_final,
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
             "mean_reputation_by_profile_across_rounds": mean_rep_across_rounds,
+            "validation_rounds": [r["round_number"] for r in self.validation_rounds.values()
+                                  if r["status"] == "COMPLETED"],
+            "validation_events": list(self.validation_rounds.values()),
+            "validation_by_node": self.validation_node_stats,
+            "validation_accuracy": self._validation_accuracy(),
         }
         return result
+
+    def _validation_accuracy(self):
+        correct = sum(r["correct_total"] for r in self.validation_rounds.values())
+        evaluated = sum(r["correct_total"] + r["incorrect_total"]
+                        for r in self.validation_rounds.values())
+        return correct / evaluated if evaluated else None
 
     # ------------------------------------------------------------------
     def flush(
@@ -402,6 +454,7 @@ class MetricsLogger:
         self._per_node_stream.close()
         self._round_stream.close()
         self._history_stream.close()
+        self._validation_stream.close()
         self._closed = True
 
     def __enter__(self) -> "MetricsLogger":

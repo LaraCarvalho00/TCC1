@@ -20,7 +20,7 @@ sistema mínimo funcional.
 | Consenso (ponderado vs. maioria) | [core/consensus.py](sistema/core/consensus.py) |
 | Dataset GSM8K (+ amostra offline) | [core/dataset.py](sistema/core/dataset.py) |
 | Modelo pequeno (SmolLM3-3B) | [node/inference.py](sistema/node/inference.py), [scripts/test_model.py](sistema/scripts/test_model.py) |
-| Ground truth só no orquestrador | tarefas em modo `real` não enviam `expected` |
+| Gabarito restrito ao avaliador | nenhum pedido HTTP envia `expected`; mock usa fixtures locais |
 | Métricas (acurácia, consenso, tempo, reputação) | [core/metrics.py](sistema/core/metrics.py) |
 
 ## Estrutura
@@ -52,7 +52,7 @@ Valida reputação, consenso e métricas em segundos, usando só a biblioteca pa
 python -m sistema.simulate --nodes 4 --malicious 0.25 --rounds 20
 ```
 
-Cenário difícil (50% maliciosos em conluio) — mostra a vantagem da reputação:
+Cenário difícil (50% maliciosos em conluio) para comparar os métodos:
 
 ```bash
 python -m sistema.simulate --nodes 4 --malicious 0.5 --collusion-value 999 --rounds 20
@@ -83,10 +83,15 @@ python -m sistema.scripts.test_model --model HuggingFaceTB/SmolLM3-3B --dataset 
 
 ## Mecanismo de reputação
 
-Cada nó começa com reputação `0.5`, atualizada a cada rodada por média móvel
-exponencial:
+Cada nó começa com reputação `0.5`. Há três mecanismos: EMA, EMA assimétrica e
+Beta. Nas tarefas normais, o sinal vem da concordância com o consenso calculado
+usando os pesos anteriores. Concordância vale 1, divergência e ausência valem 0;
+empate ou confiança abaixo de `min_confidence=0.55` mantém o peso dos respondentes.
+O gabarito dessas tarefas serve somente à medição de acurácia, sem alterar pesos.
 
-$$r \leftarrow (1 - \alpha)\,r + \alpha\,s, \quad s = \begin{cases} 1 & \text{resposta correta} \\ 0 & \text{incorreta ou ausente} \end{cases}$$
+Na EMA: `r <- (1 - alpha) * r + alpha * sinal`. Na validação, o sinal vem do
+acerto individual contra a resposta reservada do dataset. Timeout, erro HTTP e
+resposta inválida mantêm a reputação e são contados separadamente.
 
 O consenso ponderado soma a reputação dos nós que apontam cada resposta e escolhe
 a de maior peso; a reputação da rodada anterior é usada como peso da rodada atual.
@@ -95,18 +100,58 @@ a de maior peso; a reputação da rodada anterior é usada como peso da rodada a
 
 A avaliação usa o mesmo calendário em todos os experimentos: **uma rodada de
 teste a cada 10 rodadas** (rodadas 10, 20, 30, 40 e 50, em numeração a partir
-de 1). A reputação continua sendo atualizada em todas as rodadas. O que fica
-fixo é o ponto em que a acurácia é medida.
+de 1). Depois da tarefa normal dessas rodadas, todos os nós recebem perguntas
+de validação, por padrão duas. O avaliador compara respostas individuais com o
+dataset, sem consenso, e atualiza o mesmo estado de reputação. O novo peso só
+afeta a próxima tarefa. Não há parâmetro `--ground-truth`.
 
 Cada teste é registrado em `rounds.csv` (`is_test=1`, coluna `test_round`) e
 no `summary.json` (`test_rounds` e `consensus_accuracy_*_on_tests`). Essas
-rodadas são as linhas verticais dos gráficos.
+marcações medem o consenso ANTES da validação. As validações efetivamente
+concluídas ficam em `summary.validation_rounds` e determinam as linhas verticais
+dos gráficos novos. `--no-validation` permite uma execução de controle.
+
+O dataset é particionado por semente: tarefas normais e perguntas reservadas
+não se sobrepõem. Fonte, hash do conteúdo e IDs ficam em `summary.json` e
+`manifest.json`. A seleção usa um gerador aleatório separado das respostas.
+`sample` contém dez problemas offline para verificar o fluxo; `--dataset gsm8k`
+usa o split `test` (requer as dependências de modelo). O projeto não treina a LLM
+nem comprova que esse dataset fez parte de seu treinamento.
+
+Exemplo de integração e exportação, executado a partir da raiz:
+
+```bash
+python -m sistema.simulate --nodes 20 --rounds 50 --test-every 10 --validation-questions 2 --output sistema/results/validacao_nova
+python -m sistema.scripts.run_matrix --nodes 20 --seeds 2 --output sistema/results/matriz_validacao_nova
+python -m sistema.scripts.export_validacao sistema/results/matriz_validacao_nova sistema/resultados/validacao_nova
+python -m unittest discover -s sistema/tests -v
+```
+
+A exportação preserva cores, marcadores e transparência dos templates da main,
+gera figuras que leem diretamente os CSVs e usa reputações após a validação.
+O relatório separa a acurácia do consenso da acurácia individual de validação.
+Use uma pasta de saída nova: resultados de validação existentes são protegidos
+inclusive com `--overwrite`; retomada após interrupção não é suportada.
+
+No YAML: `validation_enabled: true`, `validation_questions: 2`, `test_every: 10`
+e `min_confidence: 0.55`. Para HTTP real, use `mode: real` e nós com
+`INFERENCE_MODE=model`; para HTTP mock, use `dataset: sample`. O mock aceita apenas
+as fixtures locais conhecidas e não representa inferência real.
 
 ## Métricas geradas (`sistema/results/`)
 
 - `per_node.csv` — resposta, acerto, latência e reputação (antes/depois) por nó e rodada.
 - `rounds.csv` — consenso ponderado vs. maioria e acerto por rodada.
 - `summary.json` — acurácia agregada, tempo médio e reputação final por perfil.
+- `reputation_history.csv` — checkpoint inicial e após cada rodada completa.
+- `validation_rounds.jsonl` — calendário, estado, duração e totais por validação.
+- `validation_results.csv` — pergunta, nó, resposta, avaliação e reputações.
+- `validation_updates.csv` — decomposição da atualização nos três mecanismos.
+- `validation_history.csv` — histórico detalhado dos eventos de validação.
+
+`validation_accuracy` exclui timeout/erro/inválido do denominador; consulte também
+os totais e a cobertura em `validacao_por_execucao.csv`. Os resultados antigos
+permanecem históricos e não demonstram o desempenho deste novo fluxo.
 
 ## Diagrama da rede
 
@@ -130,8 +175,10 @@ graph LR
     subgraph S[Sistema]
         D[Distribuição assíncrona] --> C[Coleta das respostas]
         C --> K[Consenso ponderado por reputação]
-        K --> A[Avaliação vs. ground truth]
-        A --> R[Atualização da reputação]
+        K --> A[Acurácia observacional]
+        K --> R[Reputação por concordância]
+        R --> V[Cada 10 rodadas: validação individual pelo dataset]
+        V --> M[Registro de métricas]
         R --> M[Registro de métricas]
     end
     M --> H[(Histórico / CSV+JSON)]

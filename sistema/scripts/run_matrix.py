@@ -57,11 +57,14 @@ if _ROOT not in sys.path:
 from sistema.core.reputation import MECHANISMS
 from sistema.core.schedule import DEFAULT_TEST_EVERY, test_rounds_1based
 from sistema.simulate import run_simulation
+from sistema.core.validation.runtime import add_validation_arguments
 
-_BASE_OUTPUT = os.path.join(os.path.dirname(__file__), "..", "results", "matrix_testes_fixos")
+_BASE_OUTPUT = os.path.join(os.path.dirname(__file__), "..", "results", "matrix_validacao_dataset")
 _INDEX_FILE = os.path.join(_BASE_OUTPUT, "matrix_index.csv")
 
 INDEX_FIELDS = [
+    "validation_enabled", "validation_questions", "validation_rounds", "validation_accuracy",
+    "dataset", "dataset_limit", "min_confidence",
     "experiment_id",
     "nodes",
     "malicious_frac",
@@ -144,12 +147,15 @@ def build_grid(
 
 
 def _experiment_id(cfg: dict) -> str:
+    import hashlib
+    signature = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:12]
     mal_pct = int(round(cfg["malicious_frac"] * 100))
     collusion_tag = f"_col{cfg['collusion_value_arg']}" if cfg["collusion"] else ""
     return (
         f"mat_n{cfg['nodes']}_m{mal_pct:02d}"
         f"_s{cfg['seed']:02d}_{cfg['mechanism']}{collusion_tag}"
         f"_t{int(cfg.get('test_every', DEFAULT_TEST_EVERY)):02d}"
+        f"_vd_{signature}"
     )
 
 
@@ -198,6 +204,11 @@ def _run_one(cfg: dict, base_output: str, dry_run: bool) -> Optional[dict]:
         test_every=cfg.get("test_every", DEFAULT_TEST_EVERY),
         row_sync=False,
         quiet=True,
+        validation_enabled=cfg.get("validation_enabled", True),
+        validation_questions=cfg.get("validation_questions", 2),
+        dataset=cfg.get("dataset", "sample"),
+        dataset_limit=cfg.get("dataset_limit"),
+        min_confidence=cfg.get("min_confidence", 0.55),
     )
 
     t0 = time.perf_counter()
@@ -237,6 +248,13 @@ def _index_row(result: dict) -> dict:
     )
     return {
         "experiment_id": result.get("exp_id", ""),
+        "validation_enabled": int(cfg.get("validation_enabled", True)),
+        "validation_questions": cfg.get("validation_questions", 2),
+        "validation_rounds": "|".join(map(str, summ.get("validation_rounds", []))),
+        "validation_accuracy": summ.get("validation_accuracy"),
+        "dataset": cfg.get("dataset", "sample"),
+        "dataset_limit": cfg.get("dataset_limit"),
+        "min_confidence": cfg.get("min_confidence", 0.55),
         "nodes": cfg.get("nodes", ""),
         "malicious_frac": cfg.get("malicious_frac", ""),
         "malicious_pct": mal_pct,
@@ -281,13 +299,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Executa a matriz de experimentos de reputação.",
     )
+    add_validation_arguments(parser)
     parser.add_argument(
         "--nodes", type=int, nargs="+", default=[7, 10, 15, 20],
         help="Tamanhos de rede a testar.",
     )
     parser.add_argument(
         "--malicious", type=float, nargs="+", default=[0.0, 0.25, 0.5, 0.65],
-        help="Frações nominais de nós maliciosos. 0.65 cobre o cenário de cerca de 65%.",
+        help="Frações nominais de nós maliciosos. 0.65 cobre o cenário de cerca de 65%%.",
     )
     parser.add_argument(
         "--seeds", type=int, default=10,
@@ -349,6 +368,11 @@ def main(argv: list[str] | None = None) -> None:
         test_every=args.test_every,
     )
 
+    for cfg in grid:
+        cfg.update(validation_enabled=args.validation_enabled,
+                   validation_questions=args.validation_questions,
+                   dataset=args.dataset, dataset_limit=args.dataset_limit,
+                   min_confidence=args.min_confidence)
     total = len(grid)
     print(f"Matriz: {total} experimentos a executar.")
     if args.dry_run:

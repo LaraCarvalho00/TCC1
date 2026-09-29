@@ -42,7 +42,7 @@ class ReputationUpdate:
     reward: float        # max(0, delta)  — ganho de reputação
     punishment: float    # max(0, -delta) — perda de reputação
     alpha_used: float    # taxa efetivamente aplicada nesta rodada
-    s: float             # sinal: 1.0 (acerto) ou 0.0 (erro/ausente)
+    s: Optional[float]   # None = sem sinal confiável
     mechanism: str       # "ema" | "ema_asymmetric" | "beta"
 
 
@@ -71,6 +71,7 @@ class ReputationTracker:
         initial: float = 0.5,
         mechanism: str = "ema",
         alpha_down: Optional[float] = None,
+        min_confidence: float = 0.55,
     ) -> None:
         if not 0.0 < alpha <= 1.0:
             raise ValueError("alpha deve estar em (0, 1].")
@@ -78,6 +79,11 @@ class ReputationTracker:
             raise ValueError("initial deve estar em [0, 1].")
         if mechanism not in MECHANISMS:
             raise ValueError(f"mechanism deve ser um de {MECHANISMS!r}.")
+        if not 0 <= min_confidence <= 1:
+            raise ValueError("min_confidence deve estar em [0, 1].")
+        if alpha_down is not None and not 0 < alpha_down <= 1:
+            raise ValueError("alpha_down deve estar em (0, 1].")
+        self.min_confidence = min_confidence
 
         self.alpha = alpha
         self.alpha_down: float = alpha_down if alpha_down is not None else alpha / 2.0
@@ -144,6 +150,21 @@ class ReputationTracker:
     def weights(self) -> dict[str, float]:
         """Retorna uma cópia das reputações atuais (usadas como pesos no consenso)."""
         return dict(self.reputation)
+
+    def hold(self, node_id: str) -> ReputationUpdate:
+        """Registra ausência de sinal sem alterar EMA nem contagens Beta."""
+        current = self.get(node_id)
+        self.history.setdefault(node_id, [self.initial]).append(current)
+        return ReputationUpdate(node_id, current, current, 0.0, 0.0, 0.0,
+                                0.0, None, self.mechanism)
+
+    def signal(self, answer, reference, confidence: float) -> Optional[bool]:
+        """Sinal operacional baseado somente nas respostas observadas."""
+        if answer is None:
+            return False
+        if reference is None or confidence < self.min_confidence:
+            return None
+        return answer == reference
 
     def get(self, node_id: str) -> float:
         """Retorna a reputação atual do nó (ou o valor inicial se não registrado)."""
