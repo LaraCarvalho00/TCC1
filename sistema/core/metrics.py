@@ -52,6 +52,7 @@ class MetricsLogger:
             os.makedirs(output_dir, exist_ok=True)
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
+        self.validation_rows: list[dict] = []
 
     def record_node(
         self,
@@ -82,6 +83,31 @@ class MetricsLogger:
                 "latency_ms": latency_ms,
                 "reputation_before": round(reputation_before, 4),
                 "reputation_after": round(reputation_after, 4),
+            }
+        )
+
+    def record_validation(
+        self,
+        *,
+        round_id: str,
+        duration_s: float,
+        questions_total: int,
+        correct_total: int,
+        incorrect_total: int,
+        timeout_total: int,
+        node_stats: Optional[dict] = None,
+        reputations: Optional[dict[str, float]] = None,
+    ) -> None:
+        self.validation_rows.append(
+            {
+                "validation_round_id": round_id,
+                "validation_round_duration": duration_s,
+                "validation_questions_total": questions_total,
+                "validation_correct_total": correct_total,
+                "validation_incorrect_total": incorrect_total,
+                "validation_timeout_total": timeout_total,
+                "node_accuracy": (node_stats or {}),
+                "node_reputation": (reputations or {}),
             }
         )
 
@@ -126,6 +152,21 @@ class MetricsLogger:
             "final_reputation_by_profile": mean_rep_by_profile,
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
             "reputation_uses_ground_truth": False,
+            "validation": self._validation_summary(),
+        }
+
+    def _validation_summary(self) -> dict:
+        if not self.validation_rows:
+            return {}
+        return {
+            "rounds": len(self.validation_rows),
+            "validation_round_duration": [row["validation_round_duration"] for row in self.validation_rows],
+            "validation_questions_total": sum(row["validation_questions_total"] for row in self.validation_rows),
+            "validation_correct_total": sum(row["validation_correct_total"] for row in self.validation_rows),
+            "validation_incorrect_total": sum(row["validation_incorrect_total"] for row in self.validation_rows),
+            "validation_timeout_total": sum(row["validation_timeout_total"] for row in self.validation_rows),
+            "node_accuracy": self.validation_rows[-1]["node_accuracy"],
+            "node_reputation": self.validation_rows[-1]["node_reputation"],
         }
 
     def flush(
@@ -142,6 +183,9 @@ class MetricsLogger:
             payload = {"config": config, "summary": summary}
             with open(os.path.join(self.output_dir, "summary.json"), "w", encoding="utf-8") as handle:
                 json.dump(payload, handle, indent=2, ensure_ascii=False)
+            if self.validation_rows:
+                with open(os.path.join(self.output_dir, "validation_metrics.json"), "w", encoding="utf-8") as handle:
+                    json.dump(self.validation_rows, handle, indent=2, ensure_ascii=False)
         return summary
 
 

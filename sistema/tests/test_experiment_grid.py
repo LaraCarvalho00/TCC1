@@ -7,9 +7,12 @@ import unittest
 from sistema.core.experiment_spec import (
     CONFIGS,
     EXPECTED_MALICIOUS_TABLE,
+    EXPECTED_PROGRESSAO_TABLE,
     LEVELS,
+    LEVELS_PROGRESSAO,
     NETWORK_SIZES,
     assign_profiles,
+    iter_cells_by_config,
     n_problematicos,
     split_instaveis,
 )
@@ -44,6 +47,30 @@ class ExperimentGridTests(unittest.TestCase):
 
     def test_cell_count(self) -> None:
         self.assertEqual(len(NETWORK_SIZES) * len(LEVELS) * len(CONFIGS), 240)
+
+    def test_progressao_table_exact(self) -> None:
+        self.assertEqual(tuple(EXPECTED_PROGRESSAO_TABLE), NETWORK_SIZES)
+        for n, row in EXPECTED_PROGRESSAO_TABLE.items():
+            self.assertEqual(tuple(row), LEVELS_PROGRESSAO)
+            for nivel, expected in row.items():
+                self.assertEqual(n_problematicos(n, nivel), expected, (n, nivel))
+
+    def test_progressao_cell_count(self) -> None:
+        self.assertEqual(len(NETWORK_SIZES) * len(LEVELS_PROGRESSAO) * len(CONFIGS), 280)
+
+    def test_iter_cells_by_config_starts_with_sem_conluio(self) -> None:
+        cells = list(iter_cells_by_config())
+        self.assertEqual(cells[0], (5, "p0", "sem_conluio"))
+        self.assertEqual(cells[1], (5, "p5", "sem_conluio"))
+        first_of_second = len(NETWORK_SIZES) * len(LEVELS_PROGRESSAO)
+        self.assertEqual(cells[first_of_second][2], "com_conluio")
+        self.assertEqual(cells[first_of_second], (5, "p0", "com_conluio"))
+        configs_in_order = []
+        for _n, _nivel, cfg in cells:
+            if cfg not in configs_in_order:
+                configs_in_order.append(cfg)
+        self.assertEqual(configs_in_order, list(CONFIGS))
+        self.assertEqual(len(cells), 280)
 
 
 if __name__ == "__main__":

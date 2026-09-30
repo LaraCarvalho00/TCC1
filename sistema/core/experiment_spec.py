@@ -15,12 +15,19 @@ from . import behavior
 
 NETWORK_SIZES = (5, 10, 15, 20, 25, 30, 35, 40, 45, 50)
 LEVELS = ("p0", "n1", "p20", "p40", "p60", "p80")
+LEVELS_PROGRESSAO = ("p0", "p5", "p20", "p35", "p50", "p65", "p80")
 CONFIGS = (
     "sem_conluio",
     "com_conluio",
     "sem_conluio_instavel",
     "com_conluio_instavel",
 )
+CONFIG_TITULOS = {
+    "sem_conluio": "1. Maliciosos sem conluio",
+    "com_conluio": "2. Maliciosos com conluio",
+    "sem_conluio_instavel": "3. Maliciosos sem conluio + instáveis (50-50)",
+    "com_conluio_instavel": "4. Maliciosos com conluio + instáveis (50-50)",
+}
 INTERPRETACAO_SPLIT = "split"
 INTERPRETACAO_EXTRA = "extra"
 COLLUSION_VALUE = 999
@@ -30,9 +37,13 @@ ORCHESTRATOR_ID = "node-0"
 P_NOMINAL = {
     "p0": 0.0,
     "n1": None,
+    "p5": 0.05,
     "p20": 0.2,
+    "p35": 0.35,
     "p40": 0.4,
+    "p50": 0.5,
     "p60": 0.6,
+    "p65": 0.65,
     "p80": 0.8,
 }
 
@@ -45,14 +56,8 @@ def n_problematicos(n: int, nivel: str) -> int:
         return 0
     if nivel == "n1":
         return 1
-    if nivel == "p20":
-        return n * 20 // 100
-    if nivel == "p40":
-        return n * 40 // 100
-    if nivel == "p60":
-        return n * 60 // 100
-    if nivel == "p80":
-        return n * 80 // 100
+    if nivel.startswith("p") and nivel[1:].isdigit():
+        return n * int(nivel[1:]) // 100
     raise ValueError(f"Nível desconhecido: {nivel!r}")
 
 
@@ -144,6 +149,18 @@ def iter_cells(
                 yield n, nivel, configuracao
 
 
+def iter_cells_by_config(
+    sizes: Iterable[int] = NETWORK_SIZES,
+    levels: Iterable[str] = LEVELS_PROGRESSAO,
+    configs: Iterable[str] = CONFIGS,
+):
+    """Uma config de cada vez; dentro dela, N crescente e depois o percentual."""
+    for configuracao in configs:
+        for n in sizes:
+            for nivel in levels:
+                yield n, nivel, configuracao
+
+
 EXPECTED_MALICIOUS_TABLE = {
     5: {"p0": 0, "n1": 1, "p20": 1, "p40": 2, "p60": 3, "p80": 4},
     10: {"p0": 0, "n1": 1, "p20": 2, "p40": 4, "p60": 6, "p80": 8},
@@ -155,4 +172,17 @@ EXPECTED_MALICIOUS_TABLE = {
     40: {"p0": 0, "n1": 1, "p20": 8, "p40": 16, "p60": 24, "p80": 32},
     45: {"p0": 0, "n1": 1, "p20": 9, "p40": 18, "p60": 27, "p80": 36},
     50: {"p0": 0, "n1": 1, "p20": 10, "p40": 20, "p60": 30, "p80": 40},
+}
+
+EXPECTED_PROGRESSAO_TABLE = {
+    5: {"p0": 0, "p5": 0, "p20": 1, "p35": 1, "p50": 2, "p65": 3, "p80": 4},
+    10: {"p0": 0, "p5": 0, "p20": 2, "p35": 3, "p50": 5, "p65": 6, "p80": 8},
+    15: {"p0": 0, "p5": 0, "p20": 3, "p35": 5, "p50": 7, "p65": 9, "p80": 12},
+    20: {"p0": 0, "p5": 1, "p20": 4, "p35": 7, "p50": 10, "p65": 13, "p80": 16},
+    25: {"p0": 0, "p5": 1, "p20": 5, "p35": 8, "p50": 12, "p65": 16, "p80": 20},
+    30: {"p0": 0, "p5": 1, "p20": 6, "p35": 10, "p50": 15, "p65": 19, "p80": 24},
+    35: {"p0": 0, "p5": 1, "p20": 7, "p35": 12, "p50": 17, "p65": 22, "p80": 28},
+    40: {"p0": 0, "p5": 2, "p20": 8, "p35": 14, "p50": 20, "p65": 26, "p80": 32},
+    45: {"p0": 0, "p5": 2, "p20": 9, "p35": 15, "p50": 22, "p65": 29, "p80": 36},
+    50: {"p0": 0, "p5": 2, "p20": 10, "p35": 17, "p50": 25, "p65": 32, "p80": 40},
 }

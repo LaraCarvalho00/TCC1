@@ -25,6 +25,7 @@ from ..core.answer import normalize
 from ..core.metrics import MetricsLogger
 from ..core.pipeline import run_round
 from ..core.reputation import ReputationTracker
+from ..core.reputation_history import ReputationHistoryStore
 from ..core.schemas import NodeResponse, RoundResult
 
 _DEFAULT_CONFIG = os.path.join(os.path.dirname(__file__), "..", "config", "experiment.yaml")
@@ -46,6 +47,18 @@ def load_tasks(config: dict) -> list[dict]:
     return dataset_module.load_sample(limit=limit)
 
 
+def build_infer_payload(task: dict, mode: str) -> dict[str, Any]:
+    """Payload enviado ao nó.
+
+    Validação e modo ``real`` nunca incluem gabarito. ``simulation`` inclui
+    ``expected`` só para os nós fabricarem o perfil — a reputação não usa isso.
+    """
+    payload: dict[str, Any] = {"task_id": task["id"], "question": task["question"]}
+    if mode == "simulation":
+        payload["expected"] = task["answer"]
+    return payload
+
+
 async def query_node(
     client: httpx.AsyncClient,
     node: dict,
@@ -54,9 +67,7 @@ async def query_node(
     timeout: float,
 ) -> NodeResponse:
     """Consulta um nó; falhas e timeouts resultam em resposta ``None``."""
-    payload: dict[str, Any] = {"task_id": task["id"], "question": task["question"]}
-    if mode == "simulation":
-        payload["expected"] = task["answer"]
+    payload = build_infer_payload(task, mode)
 
     profile = node.get("profile", "unknown")
     try:
@@ -118,6 +129,7 @@ async def run_experiment(config: dict) -> dict:
         min_confidence=float(config.get("min_confidence", 0.55)),
     )
     logger = MetricsLogger(output_dir)
+    history = ReputationHistoryStore(os.path.join(output_dir, "reputation_history.csv"))
 
     async with httpx.AsyncClient() as client:
         await wait_for_nodes(client, nodes)
@@ -138,6 +150,7 @@ async def run_experiment(config: dict) -> dict:
                 responses=responses,
                 tracker=tracker,
                 logger=logger,
+                history=history,
             )
             _print_round(result)
 

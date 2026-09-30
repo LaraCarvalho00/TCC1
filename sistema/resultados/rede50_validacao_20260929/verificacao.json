@@ -1,0 +1,17 @@
+{
+  "commit_base": "48cb995bcaca3b930acb5cc9924b85ee130a2752",
+  "execucoes": 540,
+  "pares": 270,
+  "validacoes_concluidas": 1350,
+  "consultas_validacao": 135000,
+  "condicao_com": "C:\\Users\\Allan Mateus Arruda\\.codex\\worktrees\\validacao-dataset\\TCC1\\sistema\\results\\rede50_20260929\\com_validacao_v2",
+  "condicao_sem": "C:\\Users\\Allan Mateus Arruda\\.codex\\worktrees\\validacao-dataset\\TCC1\\sistema\\results\\rede50_20260929\\sem_validacao",
+  "checks": [
+    "540 execuções completas",
+    "50 rodadas e 50 nós em cada execução",
+    "270 pares com perguntas, respostas e latências normais idênticas",
+    "sem diferença antes da primeira validação",
+    "hash/score do checkpoint conferido após cada teste"
+  ],
+  "observacao": "store.py recebeu retry limitado de PermissionError; simulação e regras de reputação inalteradas."
+}

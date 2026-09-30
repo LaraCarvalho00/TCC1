@@ -13,8 +13,11 @@ from typing import Optional
 
 from .answer import Answer
 from .consensus import majority_consensus, weighted_consensus
+from .enums import EvaluationOutcome, RoundKind, UpdateReason
 from .metrics import MetricsLogger
+from .node_stats import NodeStats
 from .reputation import ReputationTracker
+from .reputation_history import ReputationEvent, ReputationHistoryStore
 from .schemas import NodeResponse, RoundResult
 
 
@@ -26,6 +29,8 @@ def run_round(
     responses: list[NodeResponse],
     tracker: ReputationTracker,
     logger: MetricsLogger,
+    history: Optional[ReputationHistoryStore] = None,
+    stats: Optional[NodeStats] = None,
 ) -> RoundResult:
     pairs = [(r.node_id, r.answer) for r in responses]
     weights = tracker.weights()
@@ -50,9 +55,30 @@ def run_round(
         if score is None:
             reputation_after = tracker.hold(response.node_id)
             agreed = None
+            outcome = EvaluationOutcome.HELD
+        elif response.answer is None:
+            reputation_after = tracker.update(response.node_id, score)
+            agreed = False
+            outcome = EvaluationOutcome.TIMEOUT
         else:
             reputation_after = tracker.update(response.node_id, score)
-            agreed = bool(score) if response.answer is not None else False
+            agreed = bool(score)
+            outcome = EvaluationOutcome.HELD
+
+        if history is not None:
+            snapshot = stats.for_node(response.node_id) if stats is not None else None
+            history.append(
+                ReputationEvent.capture(
+                    node_id=response.node_id,
+                    round_id=str(round_index),
+                    round_kind=RoundKind.NORMAL_TASK,
+                    reputation_before=reputation_before,
+                    reputation_after=reputation_after,
+                    stats=snapshot,
+                    update_reason=UpdateReason.NORMAL_TASK,
+                    evaluation_outcome=outcome,
+                )
+            )
 
         logger.record_node(
             round_index=round_index,

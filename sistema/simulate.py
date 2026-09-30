@@ -20,6 +20,7 @@ from .core.answer import normalize
 from .core.metrics import MetricsLogger
 from .core.pipeline import run_round
 from .core.reputation import ReputationTracker
+from .core.reputation_history import ReputationHistoryStore
 from .core.schemas import NodeResponse
 
 _DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), "results", "simulacao")
@@ -78,6 +79,8 @@ def execute_simulation(
         min_confidence=min_confidence,
     )
     logger = MetricsLogger(output if persist else None)
+    history_path = os.path.join(output, "reputation_history.csv") if persist and output else None
+    history = ReputationHistoryStore(history_path)
 
     for round_index in range(rounds):
         task = tasks[round_index % len(tasks)]
@@ -103,6 +106,7 @@ def execute_simulation(
             responses=responses,
             tracker=tracker,
             logger=logger,
+            history=history,
         )
 
     run_config = {

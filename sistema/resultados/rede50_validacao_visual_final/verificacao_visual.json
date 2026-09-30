@@ -1,0 +1,14 @@
+{
+  "csvs_identicos": {
+    "evolucao_por_rodada.csv": true,
+    "impacto_medio_por_teste.csv": true,
+    "impacto_na_janela_seguinte.csv": true,
+    "impacto_por_teste_e_no.csv": true,
+    "resumo_comparativo.csv": true,
+    "scores_finais_por_no.csv": true
+  },
+  "testes_temporais": 4,
+  "pngs": 39,
+  "pdfs": 39,
+  "links_validos": 85
+}
