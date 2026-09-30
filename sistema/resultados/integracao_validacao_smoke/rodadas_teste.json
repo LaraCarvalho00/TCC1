@@ -1,0 +1,35 @@
+{
+  "intervalo_teste": 10,
+  "rodadas_teste": [
+    10,
+    20,
+    30,
+    40,
+    50
+  ],
+  "n_cenarios": 21,
+  "n_execucoes": 42,
+  "cenarios": [
+    "n20_m00_sem_beta",
+    "n20_m00_sem_ema",
+    "n20_m00_sem_ema_asymmetric",
+    "n20_m25_sem_beta",
+    "n20_m25_sem_ema",
+    "n20_m25_sem_ema_asymmetric",
+    "n20_m25_com_beta",
+    "n20_m25_com_ema",
+    "n20_m25_com_ema_asymmetric",
+    "n20_m50_sem_beta",
+    "n20_m50_sem_ema",
+    "n20_m50_sem_ema_asymmetric",
+    "n20_m50_com_beta",
+    "n20_m50_com_ema",
+    "n20_m50_com_ema_asymmetric",
+    "n20_m65_sem_beta",
+    "n20_m65_sem_ema",
+    "n20_m65_sem_ema_asymmetric",
+    "n20_m65_com_beta",
+    "n20_m65_com_ema",
+    "n20_m65_com_ema_asymmetric"
+  ]
+}

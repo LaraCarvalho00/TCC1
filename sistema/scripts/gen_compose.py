@@ -21,6 +21,7 @@ import yaml
 
 from ..core import behavior
 from ..core.reputation import MECHANISMS
+from ..core.schedule import DEFAULT_TEST_EVERY
 from ..simulate import build_profiles
 
 
@@ -80,6 +81,10 @@ def generate(args: argparse.Namespace) -> None:
         "num_tasks": args.num_tasks,
         "split": "test",
         "rounds": args.rounds,
+        "test_every": args.test_every,
+        "validation_enabled": args.validation_enabled,
+        "validation_questions": args.validation_questions,
+        "min_confidence": args.min_confidence,
         "alpha": args.alpha,
         "timeout_s": args.timeout_s,
         "output_dir": args.output_dir,
@@ -123,6 +128,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dataset", choices=["sample", "gsm8k"], default="sample")
     parser.add_argument("--num-tasks", type=int, default=10, dest="num_tasks")
     parser.add_argument("--rounds", type=int, default=20)
+    parser.add_argument("--test-every", type=int, default=DEFAULT_TEST_EVERY)
+    parser.add_argument("--validation-questions", type=int, default=2)
+    parser.add_argument("--no-validation", dest="validation_enabled", action="store_false", default=True)
+    parser.add_argument("--min-confidence", type=float, default=0.55)
     # Reputação
     parser.add_argument("--alpha", type=float, default=0.3)
     parser.add_argument(

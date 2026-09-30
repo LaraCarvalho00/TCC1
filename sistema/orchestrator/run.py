@@ -32,6 +32,9 @@ from ..core.metrics import MetricsLogger
 from ..core.reputation import MECHANISMS, ReputationTracker
 from ..core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from ..core.schemas import NodeResponse
+from ..core.validation.runtime import ValidationPlan, ValidationRuntime, load_tasks as load_validation_tasks
+from ..core.validation.models import NodeSpec
+from ..core.validation.transport import HttpNodeClient
 
 _DEFAULT_CONFIG = os.path.join(os.path.dirname(__file__), "..", "config", "experiment.yaml")
 
@@ -48,9 +51,7 @@ def load_config(path: str) -> dict[str, Any]:
 def load_tasks(config: dict) -> list[dict]:
     source = config.get("dataset", "sample")
     limit = config.get("num_tasks")
-    if source == "gsm8k":
-        return dataset_module.load_gsm8k(split=config.get("split", "test"), limit=limit)
-    return dataset_module.load_sample(limit=limit)
+    return load_validation_tasks(source, limit, config.get("dataset_split", config.get("split", "train")))
 
 
 # ---------------------------------------------------------------------------
@@ -66,8 +67,6 @@ async def query_node(
 ) -> NodeResponse:
     """Consulta um nó; falhas e timeouts resultam em resposta ``None``."""
     payload: dict[str, Any] = {"task_id": task["id"], "question": task["question"]}
-    if mode == "simulation":
-        payload["expected"] = task["answer"]
 
     profile = node.get("profile", "unknown")
     try:
@@ -81,7 +80,7 @@ async def query_node(
             latency_ms=int(data.get("latency_ms", 0)),
             profile=profile,
         )
-    except (httpx.HTTPError, ValueError):
+    except (httpx.HTTPError, ValueError, TypeError, AttributeError):
         return NodeResponse(
             node_id=node["id"],
             task_id=task["id"],
@@ -126,6 +125,25 @@ async def run_experiment(config: dict) -> dict:
     test_every = int(config.get("test_every", DEFAULT_TEST_EVERY))
     planned_tests = test_rounds_1based(rounds, test_every)
     mode = config.get("mode", "simulation")
+    if mode not in {"simulation", "real"}:
+        raise ValueError("mode deve ser simulation ou real.")
+    if mode == "simulation" and config.get("dataset", "sample") != "sample":
+        raise ValueError("HTTP mock usa sample; para GSM8K use mode=real e nós com modelo.")
+    plan = ValidationPlan.prepare(
+        tasks, enabled=config.get("validation_enabled", True),
+        count=config.get("validation_questions", 2),
+        pool_size=config.get("validation_pool_size", 5), seed=int(config.get("seed", 42)),
+        test_every=test_every, source=(
+            f"{config.get('dataset', 'sample')}:"
+            f"{config.get('dataset_split', config.get('split', 'train')) if config.get('dataset', 'sample') == 'gsm8k' else 'bundled'}"
+        ),
+        audit_failures_to_lock=config.get("audit_failures_to_lock", 2),
+        audit_weight_cap=config.get("audit_weight_cap", 0.10),
+        recovery_cap=config.get("recovery_cap", 0.05),
+        audit_timeout_policy=config.get("audit_timeout_policy", "penalize"),
+        audit_timeout_strikes=config.get("audit_timeout_strikes", 3),
+    )
+    tasks = plan.tasks
     timeout = float(config.get("timeout_s", 10))
     output_dir = config.get("output_dir", os.path.join("sistema", "results", "experimento"))
 
@@ -141,11 +159,17 @@ async def run_experiment(config: dict) -> dict:
         initial=initial,
         mechanism=mechanism,
         alpha_down=alpha_down,
+        min_confidence=float(config.get("min_confidence", 0.55)),
     )
 
     experiment_id = config.get("experiment_id", None)
     # Em Docker o diretório de volume pode já existir; usamos overwrite=True.
     logger = MetricsLogger(output_dir, experiment_id=experiment_id, overwrite=True)
+    validation = ValidationRuntime(
+        plan, tracker, logger,
+        [NodeSpec(node_id=n["id"], profile=n.get("profile", "unknown"), url=n["url"]) for n in nodes],
+        HttpNodeClient(timeout_s=timeout),
+    )
 
     try:
         async with httpx.AsyncClient() as client:
@@ -170,12 +194,15 @@ async def run_experiment(config: dict) -> dict:
                     is_test=this_is_test,
                 )
                 _print_round(result, is_test=this_is_test)
+                await asyncio.to_thread(validation.after_round, round_index)
+                logger.finish_round(round_index, tracker, profiles)
     except BaseException:
         # CSVs incrementais já têm todas as rodadas concluídas; fecha os streams.
         logger.close()
         raise
 
-    config = {**config, "test_every": test_every, "test_rounds": planned_tests}
+    config = {**config, "test_every": test_every, "test_rounds": planned_tests,
+              "min_confidence": tracker.min_confidence, **plan.metadata()}
     summary = logger.flush(
         config,
         tracker,

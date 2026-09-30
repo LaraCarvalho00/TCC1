@@ -8,9 +8,16 @@ número presente no texto.
 from __future__ import annotations
 
 import re
+import math
 from typing import Optional, Union
 
 Answer = Union[int, float]
+
+
+def is_numeric_answer(value) -> bool:
+    """Resposta GSM8K válida: número finito, excluindo booleanos."""
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and (not isinstance(value, float) or math.isfinite(value)))
 
 _NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 

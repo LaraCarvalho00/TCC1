@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 PER_NODE_FIELDS = [
+    "reputation_signal", "consensus_confidence", "update_reason",
     "experiment_id",
     "round_index",
     "task_id",
@@ -64,7 +65,9 @@ PER_NODE_FIELDS = [
     "punishment",        # max(0, -delta)
     "alpha_used",        # taxa de aprendizado efetivamente aplicada
     "mechanism",         # ema | ema_asymmetric | beta
-    "weight_used",       # peso usado no consenso ponderado (= reputation_before)
+    "weight_used",       # peso efetivo usado no consenso ponderado
+    "audit_locked",
+    "effective_weight_after",
     "consensus_weighted_result",
     "consensus_majority_result",
     "consensus_weighted_correct",
@@ -106,6 +109,26 @@ HISTORY_FIELDS = [
     "profile",
     "checkpoint",   # 0 = inicial; k+1 = após rodada k
     "reputation",
+    "effective_weight",
+    "audit_locked",
+    "audit_failures",
+    "audit_successes",
+    "audit_failure_streak",
+    "audit_success_streak",
+    "audit_last_outcome",
+]
+
+VALIDATION_UPDATE_FIELDS = [
+    "experiment_id", "round_number", "round_id", "node_id", "profile",
+    "question_id", "outcome", "reputation_before", "reputation_after",
+    "delta", "reward", "punishment", "alpha_used", "mechanism", "penalty_applied",
+]
+
+AUDIT_STATE_FIELDS = [
+    "experiment_id", "round_number", "phase", "node_id", "raw_reputation",
+    "effective_weight", "audit_locked",
+    "audit_failures", "audit_successes", "audit_last_outcome",
+    "audit_failure_streak", "audit_success_streak",
 ]
 
 
@@ -139,6 +162,8 @@ class MetricsLogger:
         overwrite: bool = False,
         row_sync: bool = True,
     ) -> None:
+        if os.path.exists(os.path.join(output_dir, "validation_rounds.jsonl")):
+            raise FileExistsError("Resultados de validação existentes: use outra pasta/experiment_id.")
         if not overwrite and os.path.exists(output_dir):
             raise FileExistsError(
                 f"Diretório já existe: {output_dir!r}. "
@@ -149,6 +174,9 @@ class MetricsLogger:
         self.experiment_id = experiment_id or _generate_id()
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
+        self.validation_rounds: dict[str, dict] = {}
+        self.validation_node_stats: dict[str, dict] = {}
+        self.audit_state_rows: list[dict] = []
 
         # --- Gravação incremental --------------------------------------
         # Abrimos os três CSVs de série temporal já no início e escrevemos
@@ -162,6 +190,14 @@ class MetricsLogger:
         )
         self._history_stream = _CsvStream(
             os.path.join(output_dir, "reputation_history.csv"), HISTORY_FIELDS, sync=row_sync
+        )
+        self._validation_stream = _CsvStream(
+            os.path.join(output_dir, "validation_updates.csv"),
+            VALIDATION_UPDATE_FIELDS, sync=row_sync,
+        )
+        self._audit_stream = _CsvStream(
+            os.path.join(output_dir, "validation_audit_state.csv"),
+            AUDIT_STATE_FIELDS, sync=row_sync,
         )
         # Nós cujo checkpoint 0 (reputação inicial) já foi escrito no histórico.
         self._history_seed_written: set[str] = set()
@@ -192,8 +228,15 @@ class MetricsLogger:
         is_tie_weighted: bool,
         is_tie_majority: bool,
         is_test: bool = False,
+        reputation_signal: Optional[bool] = None,
+        consensus_confidence: float = 0.0,
+        audit_locked: bool = False,
+        effective_weight_after: Optional[float] = None,
     ) -> None:
         row = {
+            "reputation_signal": "" if reputation_signal is None else int(reputation_signal),
+            "consensus_confidence": round(consensus_confidence, 6),
+            "update_reason": "NORMAL_TASK",
             "experiment_id": self.experiment_id,
             "round_index": round_index,
             "task_id": task_id,
@@ -215,6 +258,9 @@ class MetricsLogger:
             "alpha_used": round(rep_update.alpha_used, 6),
             "mechanism": rep_update.mechanism,
             "weight_used": round(weight_used, 6),
+            "audit_locked": int(audit_locked),
+            "effective_weight_after": ("" if effective_weight_after is None
+                                       else round(effective_weight_after, 6)),
             "consensus_weighted_result": (
                 "" if consensus_weighted_result is None else consensus_weighted_result
             ),
@@ -239,15 +285,76 @@ class MetricsLogger:
                 "profile": profile,
                 "checkpoint": 0,
                 "reputation": round(rep_update.score_before, 6),
+                "effective_weight": round(weight_used, 6),
+                "audit_locked": int(audit_locked),
+                "audit_failures": 0,
+                "audit_successes": 0,
+                "audit_failure_streak": 0,
+                "audit_success_streak": 0,
+                "audit_last_outcome": "",
             })
             self._history_seed_written.add(node_id)
-        self._history_stream.write({
-            "experiment_id": self.experiment_id,
-            "node_id": node_id,
-            "profile": profile,
-            "checkpoint": round_index + 1,
-            "reputation": round(rep_update.score_after, 6),
+
+    def finish_round(self, round_index: int, tracker, profiles: dict[str, str]) -> None:
+        """Checkpoint depois da tarefa E da eventual validação."""
+        for node_id, reputation in tracker.weights().items():
+            effective = tracker.consensus_weights()[node_id]
+            self._history_stream.write({
+                "experiment_id": self.experiment_id, "node_id": node_id,
+                "profile": profiles[node_id], "checkpoint": round_index + 1,
+                "reputation": round(reputation, 6),
+                "effective_weight": round(effective, 6),
+                "audit_locked": int(tracker.audit_locked.get(node_id, False)),
+                "audit_failures": tracker.audit_failures.get(node_id, 0),
+                "audit_successes": tracker.audit_successes.get(node_id, 0),
+                "audit_failure_streak": tracker.audit_failure_streak.get(node_id, 0),
+                "audit_success_streak": tracker.audit_success_streak.get(node_id, 0),
+                "audit_last_outcome": tracker.audit_last_outcome.get(node_id, ""),
+            })
+
+    def record_validation_update(self, round_, node, question, outcome, update,
+                                 penalty_applied: bool = False) -> None:
+        self._validation_stream.write({
+            "experiment_id": self.experiment_id, "round_number": round_.round_number,
+            "round_id": round_.id, "node_id": node.node_id, "profile": node.profile,
+            "question_id": question.question_id, "outcome": outcome,
+            "reputation_before": update.score_before, "reputation_after": update.score_after,
+            "delta": update.delta, "reward": update.reward, "punishment": update.punishment,
+            "alpha_used": update.alpha_used, "mechanism": update.mechanism,
+            "penalty_applied": int(penalty_applied),
         })
+
+    def record_validation(self, round_, stats) -> None:
+        self.validation_rounds[round_.id] = dict(round_.__dict__)
+        self.validation_node_stats = {
+            node_id: {"correct": acc.total_correct, "incorrect": acc.total_incorrect,
+                      "timeouts": acc.total_timeouts, "errors": acc.total_errors,
+                      "evaluated": acc.total_evaluated,
+                      "accuracy": acc.accuracy if acc.total_evaluated else None}
+            for node_id, acc in stats.by_node.items()
+        }
+
+    def record_audit_state(self, round_number: int, tracker, phase: str) -> None:
+        if phase not in {"before", "after"}:
+            raise ValueError("phase deve ser before ou after.")
+        effective = tracker.consensus_weights()
+        for node_id, raw_score in tracker.weights().items():
+            row = {
+                "experiment_id": self.experiment_id,
+                "round_number": round_number,
+                "phase": phase,
+                "node_id": node_id,
+                "raw_reputation": round(raw_score, 6),
+                "effective_weight": round(effective[node_id], 6),
+                "audit_locked": int(tracker.audit_locked.get(node_id, False)),
+                "audit_failures": tracker.audit_failures.get(node_id, 0),
+                "audit_successes": tracker.audit_successes.get(node_id, 0),
+                "audit_failure_streak": tracker.audit_failure_streak.get(node_id, 0),
+                "audit_success_streak": tracker.audit_success_streak.get(node_id, 0),
+                "audit_last_outcome": tracker.audit_last_outcome.get(node_id, ""),
+            }
+            self.audit_state_rows.append(row)
+            self._audit_stream.write(row)
 
     # ------------------------------------------------------------------
     def record_round(
@@ -357,8 +464,33 @@ class MetricsLogger:
             "final_reputation_by_profile": mean_rep_final,
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
             "mean_reputation_by_profile_across_rounds": mean_rep_across_rounds,
+            "validation_rounds": [r["round_number"] for r in self.validation_rounds.values()
+                                  if r["status"] == "COMPLETED"],
+            "validation_events": list(self.validation_rounds.values()),
+            "validation_by_node": self.validation_node_stats,
+            "validation_accuracy": self._validation_accuracy(),
+            "audit_locked_nodes": sorted(
+                node for node, locked in (tracker.audit_locked.items() if tracker else []) if locked
+            ),
+            "audit_by_node": ({
+                node: {
+                    "failures": tracker.audit_failures.get(node, 0),
+                    "successes": tracker.audit_successes.get(node, 0),
+                    "failure_streak": tracker.audit_failure_streak.get(node, 0),
+                    "success_streak": tracker.audit_success_streak.get(node, 0),
+                    "last_outcome": tracker.audit_last_outcome.get(node, ""),
+                    "locked": tracker.audit_locked.get(node, False),
+                }
+                for node in tracker.reputation
+            } if tracker else {}),
         }
         return result
+
+    def _validation_accuracy(self):
+        correct = sum(r["correct_total"] for r in self.validation_rounds.values())
+        evaluated = sum(r["correct_total"] + r["incorrect_total"]
+                        for r in self.validation_rounds.values())
+        return correct / evaluated if evaluated else None
 
     # ------------------------------------------------------------------
     def flush(
@@ -378,6 +510,12 @@ class MetricsLogger:
 
         final_reps = tracker.weights()
         summ = self.summary(final_reps, profiles, tracker)
+        summ["effective_weight_by_node"] = {
+            node: round(weight, 6) for node, weight in tracker.consensus_weights().items()
+        }
+        summ["audit_locked_nodes"] = sorted(
+            node for node, locked in tracker.audit_locked.items() if locked
+        )
         payload = {"config": config, "summary": summ}
         with open(os.path.join(self.output_dir, "summary.json"), "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, ensure_ascii=False)
@@ -402,6 +540,8 @@ class MetricsLogger:
         self._per_node_stream.close()
         self._round_stream.close()
         self._history_stream.close()
+        self._validation_stream.close()
+        self._audit_stream.close()
         self._closed = True
 
     def __enter__(self) -> "MetricsLogger":

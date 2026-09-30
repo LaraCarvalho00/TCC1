@@ -1,17 +1,26 @@
 # Configuração do experimento (orquestrador fixo, rede bem conectada).
 #
-# mode: "simulation" -> nós recebem o gabarito e fabricam o comportamento do
+# mode: "simulation" -> nós usam fixtures locais para fabricar o comportamento do
 #                       perfil (valida comunicação e reputação sem modelo).
 #       "real"       -> nós NÃO recebem o gabarito; nós honestos executam o LLM.
 mode: simulation
 
 # Fonte das tarefas: "sample" (amostra offline embutida) ou "gsm8k" (download).
 dataset: sample
-num_tasks: 10          # limita o nº de tarefas carregadas (null = todas)
-split: test            # usado apenas quando dataset = gsm8k
+dataset_split: train   # usa exemplos do split de treinamento para tarefa/auditoria GSM8K
+num_tasks: null         # limita o nº de tarefas carregadas (null = todas)
 
 rounds: 20             # nº de rodadas (null = uma por tarefa)
 test_every: 10         # uma rodada de teste a cada 10 rodadas (10, 20, …)
+validation_enabled: true
+validation_questions: 2
+validation_pool_size: 5
+min_confidence: 0.55
+audit_failures_to_lock: 2
+audit_weight_cap: 0.10
+recovery_cap: 0.05
+audit_timeout_policy: penalize # penalidade após timeout_strikes consecutivos
+audit_timeout_strikes: 3
 alpha: 0.3             # taxa de aprendizado da reputação (EMA)
 timeout_s: 10          # tempo máximo de espera por nó (detecta instabilidade)
 output_dir: sistema/results/experimento

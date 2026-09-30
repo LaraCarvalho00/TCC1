@@ -1,0 +1,31 @@
+% Acurácia do consenso ponderado por rodada, sem conluio, 20 nós, EMA.
+% Uma curva por percentual de maliciosos.
+% Ajuste \figw e \figh abaixo.
+
+\renewcommand{\figw}{0.92\textwidth}
+\renewcommand{\figh}{7.6cm}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}]
+  \linhasDeTeste
+  \addplot[serie zero] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m00_sem_ema.csv};
+  \addlegendentry{0\%}
+  \addplot[serie vinte] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m25_sem_ema.csv};
+  \addlegendentry{25\%}
+  \addplot[serie cinquenta] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m50_sem_ema.csv};
+  \addlegendentry{50\%}
+  \addplot[serie sessenta] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/n20_m65_sem_ema.csv};
+  \addlegendentry{65\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia do consenso ponderado por rodada, sem conluio, 20 nós, EMA.
+Média entre as sementes.}
+\label{fig:acuracia-sem-conluio}
+\end{figure}
