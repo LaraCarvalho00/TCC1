@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import time
 from typing import Optional
 
 from .models import ValidationResult, ValidationRound
@@ -75,6 +76,9 @@ class ValidationStore:
     def results_for_node(self, node_id: str) -> list[ValidationResult]:
         return [item for item in self.results if item.node_id == node_id]
 
+    def results_for_round(self, round_id: str) -> list[ValidationResult]:
+        return [item for item in self.results if item.validation_round_id == round_id]
+
     def _rounds_path(self) -> str:
         return os.path.join(self.output_dir, "validation_rounds.jsonl")
 
@@ -87,7 +91,15 @@ class ValidationStore:
         with open(temporary, "w", encoding="utf-8") as handle:
             for round_ in self.rounds.values():
                 handle.write(json.dumps(round_.__dict__, ensure_ascii=False) + "\n")
-        os.replace(temporary, path)
+        # Windows may briefly lock the destination while scanners read it.
+        for attempt in range(6):
+            try:
+                os.replace(temporary, path)
+                break
+            except PermissionError:
+                if os.name != "nt" or attempt == 5:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
 
     def _append_result(self, result: ValidationResult) -> None:
         path = self._results_path()

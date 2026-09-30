@@ -33,6 +33,8 @@ class ValidationRoundService:
         stats: NodeStats,
         evaluator: Optional[ValidationEvaluator] = None,
         metrics: Optional[MetricsLogger] = None,
+        timeout_policy: str = "hold",
+        timeout_strikes: int = 3,
     ) -> None:
         self.tracker = tracker
         self.client = client
@@ -41,6 +43,14 @@ class ValidationRoundService:
         self.stats = stats
         self.evaluator = evaluator or ValidationEvaluator()
         self.metrics = metrics
+        if timeout_policy not in {"hold", "penalize"}:
+            raise ValueError("timeout_policy deve ser hold ou penalize.")
+        if (isinstance(timeout_strikes, bool) or not isinstance(timeout_strikes, int)
+                or timeout_strikes < 1):
+            raise ValueError("timeout_strikes deve ser inteiro positivo.")
+        self.timeout_policy = timeout_policy
+        self.timeout_strikes = timeout_strikes
+        self._timeout_streak: dict[str, int] = {}
 
     def start(
         self,
@@ -148,16 +158,29 @@ class ValidationRoundService:
 
         reputation_before = self.tracker.get(node.node_id)
         created_stats = False
+        penalty_applied = False
         if outcome == EvaluationOutcome.CORRECT:
-            update = self.tracker.update(node.node_id, True)
+            self._timeout_streak[node.node_id] = 0
+            update = self.tracker.update(node.node_id, True, source="audit")
             self.stats.apply(node.node_id, outcome)
             created_stats = True
         elif outcome == EvaluationOutcome.INCORRECT:
-            update = self.tracker.update(node.node_id, False)
+            self._timeout_streak[node.node_id] = 0
+            update = self.tracker.update(node.node_id, False, source="audit")
             self.stats.apply(node.node_id, outcome)
             created_stats = True
         else:
-            update = self.tracker.hold(node.node_id)
+            if outcome == EvaluationOutcome.TIMEOUT:
+                self._timeout_streak[node.node_id] = self._timeout_streak.get(node.node_id, 0) + 1
+                penalty_applied = (self.timeout_policy == "penalize"
+                                   and self._timeout_streak[node.node_id] % self.timeout_strikes == 0)
+                update = (self.tracker.update(node.node_id, False, source="audit_timeout")
+                          if penalty_applied else self.tracker.hold(node.node_id))
+            else:
+                # Erro/inválido não prova falha do nó; resetar evita acumular timeouts
+                # através de incidentes de infraestrutura distintos.
+                self._timeout_streak[node.node_id] = 0
+                update = self.tracker.hold(node.node_id)
 
         reputation_after = self.tracker.get(node.node_id)
 
@@ -195,10 +218,13 @@ class ValidationRoundService:
             reputation_before=reputation_before,
             reputation_after=reputation_after,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            penalty_applied=penalty_applied,
         )
         self.store.add_result(result)
         if self.metrics is not None:
-            self.metrics.record_validation_update(round_, node, question, outcome, update)
+            self.metrics.record_validation_update(
+                round_, node, question, outcome, update, penalty_applied=penalty_applied
+            )
 
     def _refresh_totals(self, round_: ValidationRound) -> None:
         items = [

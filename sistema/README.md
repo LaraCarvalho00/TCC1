@@ -90,8 +90,9 @@ empate ou confiança abaixo de `min_confidence=0.55` mantém o peso dos responde
 O gabarito dessas tarefas serve somente à medição de acurácia, sem alterar pesos.
 
 Na EMA: `r <- (1 - alpha) * r + alpha * sinal`. Na validação, o sinal vem do
-acerto individual contra a resposta reservada do dataset. Timeout, erro HTTP e
-resposta inválida mantêm a reputação e são contados separadamente.
+acerto individual contra a resposta reservada do dataset. Erro HTTP e resposta
+inválida mantêm a reputação; timeouts consecutivos podem receber penalidade
+configurável e são registrados separadamente.
 
 O consenso ponderado soma a reputação dos nós que apontam cada resposta e escolhe
 a de maior peso; a reputação da rodada anterior é usada como peso da rodada atual.
@@ -133,8 +134,19 @@ O relatório separa a acurácia do consenso da acurácia individual de validaç�
 Use uma pasta de saída nova: resultados de validação existentes são protegidos
 inclusive com `--overwrite`; retomada após interrupção não é suportada.
 
-No YAML: `validation_enabled: true`, `validation_questions: 2`, `test_every: 10`
-e `min_confidence: 0.55`. Para HTTP real, use `mode: real` e nós com
+No YAML, configure `validation_enabled`, `validation_questions`,
+`validation_pool_size`, `test_every` e os limites `audit_*`. A partição de
+auditoria é fixa e independente da quantidade de perguntas por rodada. Se a
+validação deve usar o split de treinamento GSM8K, configure `dataset: gsm8k` e
+`dataset_split: train`; a origem do split fica no manifesto. Isso mede respostas
+a exemplos do treino e não substitui uma avaliação independente. A política
+padrão aplica uma penalidade a cada `audit_timeout_strikes` timeouts consecutivos; use
+`audit_timeout_policy: hold` para desativá-la. Erros do avaliador e respostas
+inválidas não são contados como falha do nó. Nós com falhas suficientes no bloco
+de auditoria têm o peso efetivo limitado; o score operacional fica preservado e
+sua recuperação é limitada por `recovery_cap`.
+
+Para HTTP real, use `mode: real` e nós com
 `INFERENCE_MODE=model`; para HTTP mock, use `dataset: sample`. O mock aceita apenas
 as fixtures locais conhecidas e não representa inferência real.
 
@@ -144,6 +156,7 @@ as fixtures locais conhecidas e não representa inferência real.
 - `rounds.csv` — consenso ponderado vs. maioria e acerto por rodada.
 - `summary.json` — acurácia agregada, tempo médio e reputação final por perfil.
 - `reputation_history.csv` — checkpoint inicial e após cada rodada completa.
+- `validation_audit_state.csv` — snapshots antes/depois da auditoria com score, peso efetivo, strikes, streaks e estado de bloqueio por nó.
 - `validation_rounds.jsonl` — calendário, estado, duração e totais por validação.
 - `validation_results.csv` — pergunta, nó, resposta, avaliação e reputações.
 - `validation_updates.csv` — decomposição da atualização nos três mecanismos.

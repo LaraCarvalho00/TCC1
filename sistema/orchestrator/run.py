@@ -51,7 +51,7 @@ def load_config(path: str) -> dict[str, Any]:
 def load_tasks(config: dict) -> list[dict]:
     source = config.get("dataset", "sample")
     limit = config.get("num_tasks")
-    return load_validation_tasks(source, limit, config.get("split", "test"))
+    return load_validation_tasks(source, limit, config.get("dataset_split", config.get("split", "train")))
 
 
 # ---------------------------------------------------------------------------
@@ -131,8 +131,17 @@ async def run_experiment(config: dict) -> dict:
         raise ValueError("HTTP mock usa sample; para GSM8K use mode=real e nós com modelo.")
     plan = ValidationPlan.prepare(
         tasks, enabled=config.get("validation_enabled", True),
-        count=config.get("validation_questions", 2), seed=int(config.get("seed", 42)),
-        test_every=test_every, source=f"{config.get('dataset', 'sample')}:{config.get('split', 'test')}",
+        count=config.get("validation_questions", 2),
+        pool_size=config.get("validation_pool_size", 5), seed=int(config.get("seed", 42)),
+        test_every=test_every, source=(
+            f"{config.get('dataset', 'sample')}:"
+            f"{config.get('dataset_split', config.get('split', 'train')) if config.get('dataset', 'sample') == 'gsm8k' else 'bundled'}"
+        ),
+        audit_failures_to_lock=config.get("audit_failures_to_lock", 2),
+        audit_weight_cap=config.get("audit_weight_cap", 0.10),
+        recovery_cap=config.get("recovery_cap", 0.05),
+        audit_timeout_policy=config.get("audit_timeout_policy", "penalize"),
+        audit_timeout_strikes=config.get("audit_timeout_strikes", 3),
     )
     tasks = plan.tasks
     timeout = float(config.get("timeout_s", 10))

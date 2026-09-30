@@ -72,7 +72,8 @@ def run_simulation(args: argparse.Namespace) -> dict:
     node_ids = list(profiles)
 
     source = getattr(args, "dataset", "sample")
-    tasks = load_tasks(source, getattr(args, "dataset_limit", None))
+    dataset_split = getattr(args, "dataset_split", "train")
+    tasks = load_tasks(source, getattr(args, "dataset_limit", None), dataset_split)
     if not tasks:
         raise RuntimeError("Amostra de dataset vazia.")
 
@@ -107,8 +108,14 @@ def run_simulation(args: argparse.Namespace) -> dict:
     planned_tests = test_rounds_1based(args.rounds, test_every)
     plan = ValidationPlan.prepare(
         tasks, enabled=getattr(args, "validation_enabled", True),
-        count=getattr(args, "validation_questions", 2), seed=args.seed,
-        test_every=test_every, source=f"{source}:test",
+        count=getattr(args, "validation_questions", 2),
+        pool_size=getattr(args, "validation_pool_size", 5), seed=args.seed,
+        test_every=test_every, source=f"{source}:{dataset_split if source == 'gsm8k' else 'bundled'}",
+        audit_failures_to_lock=getattr(args, "audit_failures_to_lock", 2),
+        audit_weight_cap=getattr(args, "audit_weight_cap", 0.10),
+        recovery_cap=getattr(args, "recovery_cap", 0.05),
+        audit_timeout_policy=getattr(args, "audit_timeout_policy", "penalize"),
+        audit_timeout_strikes=getattr(args, "audit_timeout_strikes", 3),
     )
     tasks = plan.tasks
     logger = MetricsLogger(
@@ -166,6 +173,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
     # Configuração que vai para o manifest / summary.
     run_config = {
         "source": "simulate",
+        "dataset_split": dataset_split,
         "nodes": args.nodes,
         "malicious_frac": args.malicious,
         "unstable_frac": args.unstable,

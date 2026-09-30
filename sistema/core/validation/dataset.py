@@ -37,8 +37,8 @@ class ValidationDataset:
 
     @classmethod
     def from_gsm8k(cls, split: str = "test", limit: Optional[int] = None) -> "ValidationDataset":
-        if split == "train":
-            raise ValueError("Validação usa o split de teste. Não avaliar no train do GSM8K.")
+        if split not in {"train", "test"}:
+            raise ValueError("Split GSM8K deve ser train ou test.")
         rows = dataset_module.load_gsm8k(split=split, limit=limit)
         return cls._from_rows(rows, version=f"gsm8k-{split}:{limit or 'all'}")
 

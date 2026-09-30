@@ -17,6 +17,8 @@ class NodeAccuracy:
     total_evaluated: int = 0
     total_correct: int = 0
     total_incorrect: int = 0
+    total_timeouts: int = 0
+    total_errors: int = 0
 
     @property
     def accuracy(self) -> float:
@@ -32,6 +34,12 @@ class NodeAccuracy:
         if outcome == EvaluationOutcome.INCORRECT:
             self.total_evaluated += 1
             self.total_incorrect += 1
+            return
+        if outcome == EvaluationOutcome.TIMEOUT:
+            self.total_timeouts += 1
+            return
+        if outcome in {EvaluationOutcome.ERROR, EvaluationOutcome.INVALID_RESPONSE}:
+            self.total_errors += 1
 
 
 @dataclass

@@ -78,7 +78,7 @@ def process_round(
         Resultado consolidado da rodada (consenso + avaliação).
     """
     # 1. Snapshot dos pesos ANTES da atualização desta rodada.
-    weights_before = tracker.weights()
+    weights_before = tracker.consensus_weights()
 
     # 2. Consenso.
     pairs = [(r.node_id, r.answer) for r in responses]
@@ -165,6 +165,8 @@ def process_round(
             is_test=is_test,
             reputation_signal=signal,
             consensus_confidence=confidence,
+            audit_locked=tracker.audit_locked.get(response.node_id, False),
+            effective_weight_after=tracker.consensus_weights().get(response.node_id, weight_used),
         )
 
     # 6. Log da rodada.

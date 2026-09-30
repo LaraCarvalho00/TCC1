@@ -18,8 +18,10 @@ def export(matrix_dir: str, out_dir: str) -> None:
         index = list(csv.DictReader(handle))
     if not index or "validation_enabled" not in index[0]:
         raise ValueError("Use uma matriz com os metadados de validação.")
-    fields = ("validation_enabled", "validation_questions", "test_every", "rounds",
-              "dataset", "dataset_limit", "min_confidence")
+    fields = ("validation_enabled", "validation_questions", "validation_pool_size",
+              "audit_failures_to_lock", "audit_weight_cap", "recovery_cap",
+              "audit_timeout_policy", "audit_timeout_strikes", "test_every", "rounds",
+              "dataset", "dataset_split", "dataset_limit", "min_confidence")
     if len({tuple(row.get(k) for k in fields) for row in index}) != 1:
         raise ValueError("Exporte configurações metodológicas diferentes em pastas separadas.")
     calendars = {tuple(validation_rounds(row["output_dir"]) or []) for row in index}

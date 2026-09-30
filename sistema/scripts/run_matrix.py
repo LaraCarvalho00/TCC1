@@ -63,8 +63,10 @@ _BASE_OUTPUT = os.path.join(os.path.dirname(__file__), "..", "results", "matrix_
 _INDEX_FILE = os.path.join(_BASE_OUTPUT, "matrix_index.csv")
 
 INDEX_FIELDS = [
-    "validation_enabled", "validation_questions", "validation_rounds", "validation_accuracy",
-    "dataset", "dataset_limit", "min_confidence",
+    "validation_enabled", "validation_questions", "validation_pool_size",
+    "audit_failures_to_lock", "audit_weight_cap", "recovery_cap",
+    "audit_timeout_policy", "audit_timeout_strikes", "validation_rounds", "validation_accuracy",
+    "dataset", "dataset_split", "dataset_limit", "min_confidence",
     "experiment_id",
     "nodes",
     "malicious_frac",
@@ -206,7 +208,14 @@ def _run_one(cfg: dict, base_output: str, dry_run: bool) -> Optional[dict]:
         quiet=True,
         validation_enabled=cfg.get("validation_enabled", True),
         validation_questions=cfg.get("validation_questions", 2),
+        validation_pool_size=cfg.get("validation_pool_size", 5),
+        audit_failures_to_lock=cfg.get("audit_failures_to_lock", 2),
+        audit_weight_cap=cfg.get("audit_weight_cap", 0.10),
+        recovery_cap=cfg.get("recovery_cap", 0.05),
+        audit_timeout_policy=cfg.get("audit_timeout_policy", "penalize"),
+        audit_timeout_strikes=cfg.get("audit_timeout_strikes", 3),
         dataset=cfg.get("dataset", "sample"),
+        dataset_split=cfg.get("dataset_split", "train"),
         dataset_limit=cfg.get("dataset_limit"),
         min_confidence=cfg.get("min_confidence", 0.55),
     )
@@ -250,9 +259,16 @@ def _index_row(result: dict) -> dict:
         "experiment_id": result.get("exp_id", ""),
         "validation_enabled": int(cfg.get("validation_enabled", True)),
         "validation_questions": cfg.get("validation_questions", 2),
+        "validation_pool_size": cfg.get("validation_pool_size", 5),
+        "audit_failures_to_lock": cfg.get("audit_failures_to_lock", 2),
+        "audit_weight_cap": cfg.get("audit_weight_cap", 0.10),
+        "recovery_cap": cfg.get("recovery_cap", 0.05),
+        "audit_timeout_policy": cfg.get("audit_timeout_policy", "penalize"),
+        "audit_timeout_strikes": cfg.get("audit_timeout_strikes", 3),
         "validation_rounds": "|".join(map(str, summ.get("validation_rounds", []))),
         "validation_accuracy": summ.get("validation_accuracy"),
         "dataset": cfg.get("dataset", "sample"),
+        "dataset_split": cfg.get("dataset_split", "train"),
         "dataset_limit": cfg.get("dataset_limit"),
         "min_confidence": cfg.get("min_confidence", 0.55),
         "nodes": cfg.get("nodes", ""),
@@ -371,7 +387,14 @@ def main(argv: list[str] | None = None) -> None:
     for cfg in grid:
         cfg.update(validation_enabled=args.validation_enabled,
                    validation_questions=args.validation_questions,
-                   dataset=args.dataset, dataset_limit=args.dataset_limit,
+                   validation_pool_size=args.validation_pool_size,
+                   audit_failures_to_lock=args.audit_failures_to_lock,
+                   audit_weight_cap=args.audit_weight_cap,
+                   recovery_cap=args.recovery_cap,
+                   audit_timeout_policy=args.audit_timeout_policy,
+                   audit_timeout_strikes=args.audit_timeout_strikes,
+                   dataset=args.dataset, dataset_split=args.dataset_split,
+                   dataset_limit=args.dataset_limit,
                    min_confidence=args.min_confidence)
     total = len(grid)
     print(f"Matriz: {total} experimentos a executar.")
