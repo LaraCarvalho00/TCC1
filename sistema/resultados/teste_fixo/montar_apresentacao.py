@@ -244,7 +244,7 @@ def montar() -> None:
     paragrafo(
         pdf,
         "Em todos os experimentos há um teste a cada 10 rodadas: 10, 20, 30, 40 e 50. "
-        "A acurácia de teste é a média só nessas rodadas. Os valores são média de 10 sementes. "
+        "A acurácia de teste é a média só nessas rodadas. Os valores são média de 10 repetições. "
         "A rede de referência tem 20 nós e usa o mecanismo EMA. Nessa rede, 65% corresponde a 13 nós maliciosos. "
         "O cenário de 0% não tem variante de conluio, porque não há nós maliciosos.",
     )
@@ -282,7 +282,7 @@ def montar() -> None:
         ],
         [28, 24, 32, 32, 32, 32],
     )
-    legenda(pdf, "Tabela 1. Acurácia de teste, 20 nós, EMA. Média das rodadas 10, 20, 30, 40 e 50, entre 10 sementes.")
+    legenda(pdf, "Tabela 1. Acurácia de teste, 20 nós, EMA. Média das rodadas 10, 20, 30, 40 e 50, entre 10 repetições.")
 
     titulo(pdf, "2. Rodadas 20 a 30 e rodada 40")
     paragrafo(
@@ -375,7 +375,7 @@ def montar() -> None:
     titulo(pdf, "Anexo. Acurácia de teste de todos os cenários")
     paragrafo(
         pdf,
-        "Cada linha é a média entre 10 sementes, só nas rodadas 10, 20, 30, 40 e 50. "
+        "Cada linha é a média entre 10 repetições, só nas rodadas 10, 20, 30, 40 e 50. "
         "A coluna Real é a fração obtida depois de arredondar o número de nós maliciosos.",
     )
     tabela(

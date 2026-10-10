@@ -1,0 +1,536 @@
+% Acurácia e reputação (honestos e maliciosos) por rodada, 20 nós, EMA, de 0% a 80% de maliciosos.
+% Carregue antes: pgfplots e sistema/resultados/teste_fixo/figuras/estilo_figuras.tex.
+% Os caminhos das tabelas são relativos a sistema/resultados/rodadas_gradativas/.
+
+\definecolor{gradativo0}{RGB}{31,119,180}
+\definecolor{gradativo15}{RGB}{44,160,44}
+\definecolor{gradativo30}{RGB}{188,189,34}
+\definecolor{gradativo45}{RGB}{230,120,20}
+\definecolor{gradativo60}{RGB}{214,39,40}
+\definecolor{gradativo75}{RGB}{148,103,189}
+\definecolor{gradativo80}{RGB}{90,20,20}
+\pgfplotsset{
+  gradativo 0/.style={color=gradativo0, solid, mark=*, mark options={solid, fill=gradativo0, opacity=1}},
+  gradativo 15/.style={color=gradativo15, solid, mark=triangle*, mark options={solid, fill=gradativo15, opacity=1}},
+  gradativo 30/.style={color=gradativo30, solid, mark=pentagon*, mark options={solid, fill=gradativo30, opacity=1}},
+  gradativo 45/.style={color=gradativo45, dashed, mark=square*, mark options={solid, fill=gradativo45, opacity=1}},
+  gradativo 60/.style={color=gradativo60, dotted, mark=star, mark options={solid, fill=gradativo60, opacity=1}},
+  gradativo 75/.style={color=gradativo75, dashdotted, mark=diamond*, mark options={solid, fill=gradativo75, opacity=1}},
+  gradativo 80/.style={color=gradativo80, densely dashed, mark=x, mark options={solid, fill=gradativo80, opacity=1}},
+}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia do consenso ponderado por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-ponderado-fixo-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/fixo_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia do consenso ponderado por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-ponderado-fixo-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia do consenso ponderado por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-ponderado-dinamico-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_ponderada, col sep=comma]
+    {por_rodada/dinamico_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia do consenso ponderado por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-ponderado-dinamico-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia da maioria simples por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-maioria-fixo-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/fixo_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia da maioria simples por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-maioria-fixo-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia da maioria simples por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-maioria-dinamico-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Acurácia}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=acuracia_maioria, col sep=comma]
+    {por_rodada/dinamico_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Acurácia da maioria simples por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-maioria-dinamico-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós honestos por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-rep_honestos-fixo-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/fixo_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós honestos por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-rep_honestos-fixo-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós honestos por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-rep_honestos-dinamico-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 0] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m00_sem.csv};
+  \addlegendentry{0\%}
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_honesta, col sep=comma]
+    {por_rodada/dinamico_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós honestos por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-rep_honestos-dinamico-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós maliciosos por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-rep_maliciosos-fixo-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/fixo_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós maliciosos por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador fixo (gabarito em toda rodada). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos.}
+\label{fig:gradativo-rep_maliciosos-fixo-com}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m15_sem.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m30_sem.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m45_sem.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m60_sem.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m75_sem.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m80_sem.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós maliciosos por rodada, sem conluio (cada malicioso erra com um valor qualquer), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos. No dinâmico, cada nó é medido na própria cópia da cadeia: acima de 50\%, depois da divisão, a curva dos maliciosos é a cadeia do conluio, que os honestos não seguem.}
+\label{fig:gradativo-rep_maliciosos-dinamico-sem}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[tcc linha, width=\figw, height=\figh, ylabel={Reputação}, legend columns=4]
+  \linhasDeTeste
+  \addplot[gradativo 15] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m15_com.csv};
+  \addlegendentry{15\%}
+  \addplot[gradativo 30] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m30_com.csv};
+  \addlegendentry{30\%}
+  \addplot[gradativo 45] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m45_com.csv};
+  \addlegendentry{45\%}
+  \addplot[gradativo 60] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m60_com.csv};
+  \addlegendentry{60\%}
+  \addplot[gradativo 75] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m75_com.csv};
+  \addlegendentry{75\%}
+  \addplot[gradativo 80] table[x=rodada, y=reputacao_maliciosa, col sep=comma]
+    {por_rodada/dinamico_m80_com.csv};
+  \addlegendentry{80\%}
+  \legendaRodadaDeTeste
+\end{axis}
+\end{tikzpicture}
+\caption{Reputação média dos nós maliciosos por rodada, com conluio (todos os maliciosos respondem 999), 20 nós, EMA, orquestrador dinâmico (líder eleito, sinal híbrido, líder que forja, todas as defesas). Média entre as repetições. A curva de 0\% é o cenário sem maliciosos. No dinâmico, cada nó é medido na própria cópia da cadeia: acima de 50\%, depois da divisão, a curva dos maliciosos é a cadeia do conluio, que os honestos não seguem.}
+\label{fig:gradativo-rep_maliciosos-dinamico-com}
+\end{figure}

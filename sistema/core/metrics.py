@@ -10,7 +10,7 @@ Gera quatro arquivos por execução:
                                = inicial, checkpoint k+1 = após a rodada k).
 * ``summary.json``           — acurácia agregada, reputação final e média por
                                perfil, configuração e identificação do experimento.
-* ``manifest.json``          — configuração completa, semente, mecanismo e git sha,
+* ``manifest.json``          — configuração completa, repetição (seed), mecanismo e git sha,
                                para reprodutibilidade.
 
 Cada linha é identificada por ``experiment_id``, permitindo agregar múltiplos
@@ -108,6 +108,37 @@ HISTORY_FIELDS = [
     "reputation",
 ]
 
+# Só existe no modo com orquestrador eleito: uma linha por grupo por rodada.
+LEADERSHIP_FIELDS = [
+    "experiment_id",
+    "round_index",
+    "group_id",              # cópia da cadeia (0 = rede original)
+    "is_reference",          # 1 no grupo com mais nós não maliciosos
+    "n_members",
+    "leader",
+    "leader_profile",
+    "auditor",
+    "auditor_profile",
+    "bootstrap",             # 1 se o líder saiu do rodízio de largada
+    "attack",                # ataque aplicado pelo líder ('' = proposta honesta)
+    "outcome",               # accepted | voided
+    "objective_reason",      # forged | false_consensus | ''
+    "reason",                # motivo final da anulação/recusa
+    "censored_complaints",   # nós que acusaram censura da própria resposta
+    "confirmed_mass",
+    "total_mass",
+    "auditor_vote",          # 1 confirmou, 0 recusou, '' sem auditor
+    "penalties",             # nós punidos, separados por ';'
+    "refused_nodes",         # honestos que saíram com a própria cópia
+    "fork_group_id",
+    "hops",                  # profundidade da árvore de difusão a partir do líder
+    "oracle",                # applied | blocked | ''
+    "oracle_rejecters",
+    "malicious_power_mass",  # fração da massa de poder do conluio antes da rodada
+    "chain_length",
+    "chain_head",
+]
+
 
 # ---------------------------------------------------------------------------
 # Logger
@@ -165,7 +196,21 @@ class MetricsLogger:
         )
         # Nós cujo checkpoint 0 (reputação inicial) já foi escrito no histórico.
         self._history_seed_written: set[str] = set()
+        self._row_sync = row_sync
+        self.leadership_rows: list[dict] = []
+        self._leadership_stream: Optional[_CsvStream] = None
         self._closed = False
+
+    # ------------------------------------------------------------------
+    def record_leadership(self, row: dict) -> None:
+        """Linha de ``leadership.csv`` (arquivo criado só quando usado)."""
+        if self._leadership_stream is None:
+            self._leadership_stream = _CsvStream(
+                os.path.join(self.output_dir, "leadership.csv"), LEADERSHIP_FIELDS, sync=self._row_sync
+            )
+        row = {"experiment_id": self.experiment_id, **row}
+        self.leadership_rows.append(row)
+        self._leadership_stream.write(row)
 
     # ------------------------------------------------------------------
     def record_node(
@@ -357,6 +402,7 @@ class MetricsLogger:
             "final_reputation_by_profile": mean_rep_final,
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
             "mean_reputation_by_profile_across_rounds": mean_rep_across_rounds,
+            "recovery_round": recovery_round([int(r["consensus_correct"]) for r in self.round_rows]),
         }
         return result
 
@@ -367,17 +413,25 @@ class MetricsLogger:
         tracker: "ReputationTracker",
         profiles: dict[str, str],
         seed: Optional[int] = None,
+        extra: Optional[dict] = None,
+        final_reputations: Optional[dict[str, float]] = None,
     ) -> dict:
         """Finaliza os arquivos derivados e retorna o resumo.
 
         ``per_node.csv``, ``rounds.csv`` e ``reputation_history.csv`` já foram
         gravados linha a linha durante a execução; aqui apenas fechamos os
         streams e escrevemos ``summary.json`` / ``manifest.json``.
+
+        ``extra`` acrescenta campos ao resumo (ex.: métricas do orquestrador
+        eleito); ``final_reputations`` substitui ``tracker.weights()`` quando cada
+        nó guarda a própria cópia da reputação.
         """
         self.close()
 
-        final_reps = tracker.weights()
+        final_reps = final_reputations if final_reputations is not None else tracker.weights()
         summ = self.summary(final_reps, profiles, tracker)
+        if extra:
+            summ.update(extra)
         payload = {"config": config, "summary": summ}
         with open(os.path.join(self.output_dir, "summary.json"), "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, ensure_ascii=False)
@@ -402,6 +456,8 @@ class MetricsLogger:
         self._per_node_stream.close()
         self._round_stream.close()
         self._history_stream.close()
+        if self._leadership_stream is not None:
+            self._leadership_stream.close()
         self._closed = True
 
     def __enter__(self) -> "MetricsLogger":
@@ -449,6 +505,88 @@ class _CsvStream:
     def close(self) -> None:
         if not self._fh.closed:
             self._fh.close()
+
+def recovery_round(correct_by_round: list[int]) -> Optional[int]:
+    """Primeira rodada (1-based) a partir da qual o consenso acerta até o fim.
+
+    ``None`` se a última rodada erra (o consenso não se recuperou).
+    """
+    if not correct_by_round or not correct_by_round[-1]:
+        return None
+    start = len(correct_by_round)
+    while start > 0 and correct_by_round[start - 1]:
+        start -= 1
+    return start + 1
+
+
+def dynamic_summary(
+    leadership_rows: list[dict],
+    profiles: dict[str, str],
+    *,
+    calibration_rounds: int,
+    heads: dict[str, str],
+    graph_info: dict,
+) -> dict:
+    """Métricas do orquestrador eleito para o ``summary.json``.
+
+    As contagens de liderança, anulação e forja usam o grupo de referência
+    (onde está a maioria dos nós não maliciosos); divisões e réplicas
+    divergentes olham a rede inteira.
+    """
+    ref = [r for r in leadership_rows if int(r["is_reference"]) == 1]
+    leaders = [r["leader"] for r in ref]
+
+    by_profile: dict[str, int] = {}
+    distribution: dict[str, int] = {}
+    for row in ref:
+        by_profile[row["leader_profile"]] = by_profile.get(row["leader_profile"], 0) + 1
+        distribution[row["leader"]] = distribution.get(row["leader"], 0) + 1
+
+    longest = current = 0
+    previous = None
+    for leader in leaders:
+        current = current + 1 if leader == previous else 1
+        longest = max(longest, current)
+        previous = leader
+
+    malicious = [r for r in ref if r["leader_profile"] == "malicious"]
+    accepted = [r for r in ref if r["outcome"] == "accepted"]
+    voided = [r for r in ref if r["outcome"] == "voided"]
+    honest_heads = {heads[n] for n, p in profiles.items() if p != "malicious" and n in heads}
+    hops = [int(r["hops"]) for r in leadership_rows]
+    oracle_rows = [r for r in ref if r["oracle"]]
+
+    return {
+        "dynamic": {
+            "leader_rounds_by_profile": by_profile,
+            "leadership_distribution": dict(sorted(distribution.items())),
+            "max_consecutive_same_leader": longest,
+            "leader_malicious_rounds": len(malicious),
+            "leader_malicious_rounds_after_calibration": sum(
+                1 for r in malicious if int(r["round_index"]) >= calibration_rounds
+            ),
+            "bootstrap_rounds": sum(1 for r in ref if int(r["bootstrap"]) == 1),
+            "accepted_rounds": len(accepted),
+            "voided_rounds": len(voided),
+            "forged_accepted": sum(1 for r in accepted if r["objective_reason"]),
+            "censored_accepted": sum(1 for r in accepted if int(r["censored_complaints"]) > 0),
+            "mandates_ended_by_audit": sum(1 for r in voided if str(r["auditor_vote"]) == "0"),
+            "auditor_false_reject_penalties": sum(1 for r in ref if ":false_reject" in str(r["penalties"])),
+            "chain_split_rounds": sum(1 for r in leadership_rows if r["refused_nodes"]),
+            "n_chains_final": len(set(heads.values())),
+            "replicas_divergent_final": max(0, len(set(heads.values())) - 1),
+            "honest_replicas_divergent_final": max(0, len(honest_heads) - 1),
+            "oracle_rounds": len(oracle_rows),
+            "oracle_blocked_rounds": sum(1 for r in oracle_rows if r["oracle"] == "blocked"),
+            "oracle_rejections_total": sum(int(r["oracle_rejecters"] or 0) for r in ref),
+            "malicious_power_mass_by_round": [round(float(r["malicious_power_mass"]), 4) for r in ref],
+            "malicious_power_mass_final": round(float(ref[-1]["malicious_power_mass"]), 4) if ref else 0.0,
+            "mean_hops": round(sum(hops) / len(hops), 3) if hops else 0.0,
+            "max_hops": max(hops) if hops else 0,
+            **graph_info,
+        }
+    }
+
 
 def _generate_id() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

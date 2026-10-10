@@ -1,0 +1,106 @@
+figura,serie,x,y
+lideranca_maliciosa,"7 nós, todas as defesas",0.0,0.000
+lideranca_maliciosa,"7 nós, todas as defesas",28.57,0.000
+lideranca_maliciosa,"7 nós, todas as defesas",57.14,0.000
+lideranca_maliciosa,"7 nós, todas as defesas",71.43,0.000
+lideranca_maliciosa,"10 nós, todas as defesas",0.0,0.000
+lideranca_maliciosa,"10 nós, todas as defesas",20.0,0.000
+lideranca_maliciosa,"10 nós, todas as defesas",50.0,0.000
+lideranca_maliciosa,"10 nós, todas as defesas",60.0,0.000
+lideranca_maliciosa,"20 nós, todas as defesas",0.0,0.000
+lideranca_maliciosa,"20 nós, todas as defesas",25.0,0.000
+lideranca_maliciosa,"20 nós, todas as defesas",50.0,0.000
+lideranca_maliciosa,"20 nós, todas as defesas",65.0,0.000
+lideranca_maliciosa,"20 nós, sem defesas",50.0,0.212
+lideranca_maliciosa,"20 nós, sem defesas",65.0,1.000
+lideranca_maliciosa,"20 nós, só consenso (rodízio)",0.0,0.000
+lideranca_maliciosa,"20 nós, só consenso (rodízio)",25.0,0.255
+lideranca_maliciosa,"20 nós, só consenso (rodízio)",50.0,0.574
+lideranca_maliciosa,"20 nós, só consenso (rodízio)",65.0,0.702
+lideranca_maliciosa,fração de maliciosos,0,0.000
+lideranca_maliciosa,fração de maliciosos,25,0.250
+lideranca_maliciosa,fração de maliciosos,50,0.500
+lideranca_maliciosa,fração de maliciosos,65,0.650
+lideranca_maliciosa,fração de maliciosos,71.43,0.714
+anuladas_por_ataque,0\%,none,0.000
+anuladas_por_ataque,0\%,forge,0.000
+anuladas_por_ataque,0\%,censor,0.000
+anuladas_por_ataque,25\%,none,0.000
+anuladas_por_ataque,25\%,forge,1.000
+anuladas_por_ataque,25\%,censor,1.000
+anuladas_por_ataque,50\%,none,0.000
+anuladas_por_ataque,50\%,forge,1.000
+anuladas_por_ataque,50\%,censor,1.000
+anuladas_por_ataque,65\%,none,0.000
+anuladas_por_ataque,65\%,forge,0.000
+anuladas_por_ataque,65\%,censor,0.000
+massa_maliciosa,"híbrido, todas as defesas",0.0,0.000
+massa_maliciosa,"híbrido, todas as defesas",25.0,0.011
+massa_maliciosa,"híbrido, todas as defesas",50.0,0.031
+massa_maliciosa,"híbrido, todas as defesas",65.0,0.000
+massa_maliciosa,"só consenso, todas as defesas",0.0,0.000
+massa_maliciosa,"só consenso, todas as defesas",25.0,0.250
+massa_maliciosa,"só consenso, todas as defesas",50.0,0.500
+massa_maliciosa,"só consenso, todas as defesas",65.0,0.650
+massa_maliciosa,"híbrido, sem defesas",50.0,0.210
+massa_maliciosa,"híbrido, sem defesas",65.0,1.000
+massa_maliciosa,fração de maliciosos,0,0.000
+massa_maliciosa,fração de maliciosos,25,0.250
+massa_maliciosa,fração de maliciosos,50,0.500
+massa_maliciosa,fração de maliciosos,65,0.650
+saltos_por_n,"saltos médios, completo",7,1.000
+saltos_por_n,"saltos médios, completo",10,1.000
+saltos_por_n,"saltos médios, completo",20,1.000
+saltos_por_n,"saltos médios, completo",60,1.000
+saltos_por_n,"saltos médios, completo",120,1.000
+saltos_por_n,"diâmetro, completo",7,1.000
+saltos_por_n,"diâmetro, completo",10,1.000
+saltos_por_n,"diâmetro, completo",20,1.000
+saltos_por_n,"diâmetro, completo",60,1.000
+saltos_por_n,"diâmetro, completo",120,1.000
+saltos_por_n,"saltos médios, 4-regular",7,2.000
+saltos_por_n,"saltos médios, 4-regular",10,2.013
+saltos_por_n,"saltos médios, 4-regular",20,3.167
+saltos_por_n,"saltos médios, 4-regular",60,5.000
+saltos_por_n,"saltos médios, 4-regular",120,5.787
+saltos_por_n,"diâmetro, 4-regular",7,2.000
+saltos_por_n,"diâmetro, 4-regular",10,2.667
+saltos_por_n,"diâmetro, 4-regular",20,4.000
+saltos_por_n,"diâmetro, 4-regular",60,5.000
+saltos_por_n,"diâmetro, 4-regular",120,6.000
+ablacao,"20 nós, 50\%",allminusrefuseforged,1.000
+ablacao,"20 nós, 50\%",allminussplitscores,1.000
+ablacao,"20 nós, 50\%",allminussplitalpha,1.000
+ablacao,"20 nós, 50\%",allminusoraclebypass,1.000
+ablacao,"20 nós, 50\%",allminuscalibration,0.960
+ablacao,"20 nós, 50\%",all,1.000
+ablacao,"20 nós, 50\%",refuseforged,1.000
+ablacao,"20 nós, 50\%",splitscores,0.800
+ablacao,"20 nós, 50\%",splitalpha,1.000
+ablacao,"20 nós, 50\%",oraclebypass,0.800
+ablacao,"20 nós, 50\%",calibration,1.000
+ablacao,"20 nós, 50\%",none,0.800
+ablacao,"20 nós, 65\%",allminusrefuseforged,0.500
+ablacao,"20 nós, 65\%",allminussplitscores,1.000
+ablacao,"20 nós, 65\%",allminussplitalpha,1.000
+ablacao,"20 nós, 65\%",allminusoraclebypass,1.000
+ablacao,"20 nós, 65\%",allminuscalibration,1.000
+ablacao,"20 nós, 65\%",all,1.000
+ablacao,"20 nós, 65\%",refuseforged,1.000
+ablacao,"20 nós, 65\%",splitscores,0.000
+ablacao,"20 nós, 65\%",splitalpha,0.000
+ablacao,"20 nós, 65\%",oraclebypass,0.000
+ablacao,"20 nós, 65\%",calibration,0.000
+ablacao,"20 nós, 65\%",none,0.000
+ablacao,"7 nós, 71\%",allminusrefuseforged,0.380
+ablacao,"7 nós, 71\%",allminussplitscores,0.880
+ablacao,"7 nós, 71\%",allminussplitalpha,0.880
+ablacao,"7 nós, 71\%",allminusoraclebypass,0.880
+ablacao,"7 nós, 71\%",allminuscalibration,0.840
+ablacao,"7 nós, 71\%",all,0.880
+ablacao,"7 nós, 71\%",refuseforged,0.880
+ablacao,"7 nós, 71\%",splitscores,0.000
+ablacao,"7 nós, 71\%",splitalpha,0.000
+ablacao,"7 nós, 71\%",oraclebypass,0.000
+ablacao,"7 nós, 71\%",calibration,0.000
+ablacao,"7 nós, 71\%",none,0.000

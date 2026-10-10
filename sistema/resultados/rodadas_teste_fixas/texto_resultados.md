@@ -1,6 +1,6 @@
 # Resultados com rodadas de teste fixas
 
-Em todos os experimentos há um teste a cada 10 rodadas: 10, 20, 30, 40 e 50. A acurácia de teste é a média só nessas rodadas. Os valores abaixo são média de 10 sementes, mecanismo EMA, topologia em estrela. A rede de referência tem 20 nós, em que 65% corresponde a 13 nós maliciosos.
+Em todos os experimentos há um teste a cada 10 rodadas: 10, 20, 30, 40 e 50. A acurácia de teste é a média só nessas rodadas. Os valores abaixo são média de 10 repetições, mecanismo EMA, topologia em estrela. A rede de referência tem 20 nós, em que 65% corresponde a 13 nós maliciosos.
 
 ## 1. A comparação que mostra o método
 

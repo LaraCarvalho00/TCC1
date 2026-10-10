@@ -10,7 +10,7 @@ Sem conluio, cada nó malicioso erra com um valor diferente. Os honestos, com pr
 
 Com conluio, os maliciosos votam todos o mesmo valor errado. Abaixo de 50% os honestos ainda são maioria. Em 50% e em 65% a maioria simples acompanha o bloco malicioso. O consenso ponderado só se separa da maioria depois que a reputação dos maliciosos cai. Por isso a comparação que mostra o método é a do cenário com conluio, e não a média de todas as rodadas sem conluio.
 
-### EMA, 20 nós, média de 10 sementes
+### EMA, 20 nós, média de 10 repetições
 
 | Conluio | Maliciosos | Acurácia ponderada (todas) | Acurácia ponderada (testes) | Acurácia da maioria (testes) |
 | --- | ---: | ---: | ---: | ---: |

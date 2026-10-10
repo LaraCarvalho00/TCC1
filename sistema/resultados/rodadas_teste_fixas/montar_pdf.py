@@ -230,7 +230,7 @@ def build(images: list[Path]) -> None:
         pdf,
         "Em todos os experimentos há um teste a cada 10 rodadas: 10, 20, 30, 40 e 50. "
         "A acurácia de teste é a média só nessas rodadas. Os valores abaixo são média de "
-        "10 sementes, mecanismo EMA, topologia em estrela. A rede de referência tem 20 nós, "
+        "10 repetições, mecanismo EMA, topologia em estrela. A rede de referência tem 20 nós, "
         "em que 65% corresponde a 13 nós maliciosos. As figuras são gráficos de linha. "
         "As linhas são semitransparentes, cada série tem cor e marcador, e as linhas "
         "verticais marcam as rodadas de teste. A série de 65% e a reputação maliciosa "

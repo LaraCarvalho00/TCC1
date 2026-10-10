@@ -43,6 +43,8 @@ class RoundResult:
     consensus_weighted: Optional[Answer]
     consensus_majority: Optional[Answer]
     responses: list[NodeResponse] = field(default_factory=list)
+    # Atualização de reputação aplicada a cada nó (node_id -> ReputationUpdate).
+    updates: dict = field(default_factory=dict)
 
     @property
     def consensus_correct(self) -> bool:

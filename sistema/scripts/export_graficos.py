@@ -1,7 +1,7 @@
 """Agrega a matriz com rodadas de teste fixas e gera os gráficos em LaTeX.
 
 Lê ``matrix_index.csv`` e os ``rounds.csv`` / ``per_node.csv`` de cada
-experimento, calcula a média entre sementes e escreve:
+experimento, calcula a média entre repetições e escreve:
 
 * coordenadas em CSV (para conferência);
 * ``graficos.tex`` com pgfplots, linhas semitransparentes, marcadores e
@@ -243,7 +243,7 @@ def export(matrix_dir: str, out_dir: str) -> None:
         "acuracia_conluio",
         1,
         "Acurácia do consenso ponderado por rodada, com conluio, 20 nós e EMA. "
-        "Média de 10 sementes. A curva de 0\\% é o cenário sem nós maliciosos, "
+        "Média de 10 repetições. A curva de 0\\% é o cenário sem nós maliciosos, "
         "em que não há conluio. As linhas verticais marcam os testes das rodadas "
         "10, 20, 30, 40 e 50.",
         "fig:acuracia-conluio",
@@ -254,7 +254,7 @@ def export(matrix_dir: str, out_dir: str) -> None:
         "acuracia_sem_conluio",
         0,
         "Acurácia do consenso ponderado por rodada, sem conluio, 20 nós e EMA. "
-        "Média de 10 sementes. Sem um bloco único de respostas erradas, as curvas "
+        "Média de 10 repetições. Sem um bloco único de respostas erradas, as curvas "
         "ficam sobrepostas; a transparência deixa essa coincidência visível.",
         "fig:acuracia-sem-conluio",
         "0.84\\textwidth",
@@ -274,7 +274,7 @@ def export(matrix_dir: str, out_dir: str) -> None:
     figures.append(_figure(
         "\n".join(body),
         "Consenso ponderado e maioria ao longo das rodadas, com 65\\% de nós "
-        "maliciosos em conluio (13 de 20), EMA, média de 10 sementes.",
+        "maliciosos em conluio (13 de 20), EMA, média de 10 repetições.",
         "fig:ponderado-vs-maioria-65",
         "0.88\\textwidth",
         "6.6cm",
@@ -319,7 +319,7 @@ def export(matrix_dir: str, out_dir: str) -> None:
     figures.append(_figure(
         "\n".join(body),
         "Acurácia do consenso ponderado por mecanismo, com 65\\% de nós maliciosos "
-        "em conluio e 20 nós. Média de 10 sementes.",
+        "em conluio e 20 nós. Média de 10 repetições.",
         "fig:mecanismos-65",
         "0.88\\textwidth",
         "6.6cm",
@@ -433,7 +433,7 @@ def _write_analysis(
         "a reputação dos maliciosos cai. Por isso a comparação que mostra o método "
         "é a do cenário com conluio, e não a média de todas as rodadas sem conluio.",
         "",
-        "### EMA, 20 nós, média de 10 sementes",
+        "### EMA, 20 nós, média de 10 repetições",
         "",
         "| Conluio | Maliciosos | Acurácia ponderada (todas) | Acurácia ponderada (testes) | Acurácia da maioria (testes) |",
         "| --- | ---: | ---: | ---: | ---: |",
