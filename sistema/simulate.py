@@ -13,22 +13,34 @@ Uso::
 
     python -m sistema.simulate --nodes 4 --malicious 0.25 --rounds 50
 
+    # Orquestrador eleito a cada rodada, grafo 4-regular, todas as defesas
+    python -m sistema.simulate --orchestration dynamic --topology kregular \\
+        --nodes 20 --malicious 0.65 --collusion-value 999 --rounds 50 \\
+        --signal hybrid --defense all --leader-attack forge
+
 Observação: em simulação, o comportamento dos perfis é fabricado a partir do
 gabarito.  No processo real (containers), os nós não recebem o gabarito.
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import os
 import random
 
 from .core import behavior, dataset
 from .core.answer import normalize
+from .core.defenses import DefenseConfig, preset, preset_names
 from .core.engine import process_round
-from .core.metrics import MetricsLogger
+from .core.metrics import MetricsLogger, dynamic_summary
+from .core.network import SimulatedNetwork, log_round
+from .core.protocol import SIGNALS, ProtocolConfig, oracle_round
 from .core.reputation import MECHANISMS, ReputationTracker
 from .core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from .core.schemas import NodeResponse
+from .core.topology import KINDS, build_graph, diameter, max_degree
+
+ORCHESTRATIONS = ("fixed", "dynamic")
 
 _DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), "results", "simulacao")
 
@@ -105,6 +117,27 @@ def run_simulation(args: argparse.Namespace) -> dict:
         row_sync=bool(getattr(args, "row_sync", True)),
     )
 
+    orchestration = getattr(args, "orchestration", "fixed")
+    signal = getattr(args, "signal", "truth")
+    defense = defense_from_args(args)
+    protocol = ProtocolConfig(
+        signal=signal,
+        alpha=args.alpha,
+        mechanism=mechanism,
+        alpha_down=alpha_down,
+        initial=initial,
+        test_every=test_every,
+        defense=defense,
+    )
+    network = None
+    if orchestration == "dynamic":
+        graph = build_graph(node_ids, getattr(args, "topology", "star"), getattr(args, "degree", 4), args.seed)
+        attacks = behavior.AttackConfig(
+            leader_attack=getattr(args, "leader_attack", "none"),
+            auditor_attack=getattr(args, "auditor_attack", "none"),
+        )
+        network = SimulatedNetwork(node_ids, profiles, graph, protocol, attacks)
+
     # Laço de rodadas.  Se interrompido, os CSVs incrementais (per_node.csv,
     # rounds.csv, reputation_history.csv) já contêm todas as rodadas concluídas.
     # A rodada de teste é fixa: uma a cada `test_every` rodadas (10, 20, 30, …).
@@ -127,6 +160,19 @@ def run_simulation(args: argparse.Namespace) -> dict:
                     )
                 )
 
+            if network is not None:
+                _dynamic_round(network, logger, round_index, task["id"], expected, responses, profiles,
+                               mechanism, initial, this_is_test)
+                continue
+
+            # Orquestrador fixo. Com sinal de consenso ou híbrido, a rodada de
+            # correção usa o gabarito no lugar do consenso.
+            round_signal, round_alpha = "truth", None
+            if signal != "truth":
+                if oracle_round(round_index, protocol):
+                    round_signal, round_alpha = "truth", protocol.oracle_alpha
+                else:
+                    round_signal, round_alpha = "consensus", protocol.consensus_alpha
             process_round(
                 round_index=round_index,
                 task_id=task["id"],
@@ -135,6 +181,8 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 tracker=tracker,
                 logger=logger,
                 is_test=this_is_test,
+                signal=round_signal,
+                alpha=round_alpha,
             )
     except BaseException:
         logger.close()
@@ -158,10 +206,86 @@ def run_simulation(args: argparse.Namespace) -> dict:
         "test_every": test_every,
         "test_rounds": planned_tests,
     }
-    summary = logger.flush(run_config, tracker, profiles, seed=args.seed)
+    extra = None
+    final_reputations = None
+    if orchestration != "fixed" or signal != "truth":
+        run_config.update({
+            "orchestration": orchestration,
+            "signal": signal,
+            "defense": defense.to_dict(),
+            "defense_preset": getattr(args, "defense", "none"),
+        })
+    if network is not None:
+        run_config.update({
+            "topology": getattr(args, "topology", "star"),
+            "degree": getattr(args, "degree", 4),
+            "leader_attack": network.attacks.leader_attack,
+            "auditor_attack": network.attacks.auditor_attack,
+        })
+        extra = dynamic_summary(
+            logger.leadership_rows,
+            profiles,
+            calibration_rounds=defense.calibration_rounds,
+            heads=network.heads(),
+            graph_info={"graph_max_degree": max_degree(network.graph), "graph_diameter": diameter(network.graph)},
+        )
+        final_reputations = {n: network.group_of(n).state.consensus.get(n) for n in node_ids}
+    summary = logger.flush(
+        run_config, tracker, profiles, seed=args.seed, extra=extra, final_reputations=final_reputations,
+    )
     if not getattr(args, "quiet", False):
         _print_summary(summary, profiles, logger.output_dir)
     return summary
+
+
+def defense_from_args(args: argparse.Namespace) -> DefenseConfig:
+    """Preset de defesa com os ajustes individuais da linha de comando."""
+    config = preset(getattr(args, "defense", "none") or "none")
+    overrides = {}
+    if getattr(args, "calibration_rounds", None) is not None:
+        overrides["calibration_rounds"] = args.calibration_rounds
+    if getattr(args, "consensus_alpha", None) is not None:
+        overrides["consensus_alpha"] = args.consensus_alpha
+    if getattr(args, "oracle_alpha", None) is not None:
+        overrides["oracle_alpha"] = args.oracle_alpha
+    for flag in ("split_alpha", "oracle_bypasses_quorum", "split_scores", "refuse_forged"):
+        if getattr(args, flag, False):
+            overrides[flag] = True
+    return dataclasses.replace(config, **overrides) if overrides else config
+
+
+def _dynamic_round(
+    network: SimulatedNetwork,
+    logger: MetricsLogger,
+    round_index: int,
+    task_id: str,
+    expected,
+    responses: list[NodeResponse],
+    profiles: dict[str, str],
+    mechanism: str,
+    initial: float,
+    is_test: bool,
+) -> None:
+    answers = {r.node_id: r.answer for r in responses}
+    before = {n: network.group_of(n).state.consensus.get(n) for n in answers}
+    outcomes = network.run_round(round_index, task_id, expected, answers)
+    after = {n: network.group_of(n).state.consensus.get(n) for n in answers}
+    log_round(
+        logger,
+        round_index=round_index,
+        task_id=task_id,
+        expected=expected,
+        responses=responses,
+        profiles=profiles,
+        reps_before=before,
+        reps_after=after,
+        reference_members=network.reference_group().members,
+        outcomes=outcomes,
+        chains={g.gid: (len(g.ledger), g.ledger.head) for g in network.groups},
+        mechanism=mechanism,
+        initial=initial,
+        is_test=is_test,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +301,19 @@ def _print_summary(summary: dict, profiles: dict[str, str], output_dir: str) -> 
     print(f"Acurácia do consenso ponderado (só testes): {summary.get('consensus_accuracy_weighted_on_tests', 0):.2%}")
     print(f"Acurácia do consenso por maioria (só testes): {summary.get('consensus_accuracy_majority_on_tests', 0):.2%}")
     print(f"Tempo médio de resposta: {summary['mean_latency_ms']:.0f} ms")
+    print(f"Rodada de recuperação do consenso: {summary.get('recovery_round')}")
+    dyn = summary.get("dynamic")
+    if dyn:
+        print("\nOrquestrador eleito (grupo de referência):")
+        print(f"  Líderes por perfil: {dyn['leader_rounds_by_profile']}")
+        print(f"  Maior sequência do mesmo líder: {dyn['max_consecutive_same_leader']}")
+        print(f"  Líder do conluio depois da calibração: {dyn['leader_malicious_rounds_after_calibration']}")
+        print(f"  Rodadas aceitas / anuladas: {dyn['accepted_rounds']} / {dyn['voided_rounds']}")
+        print(f"  Forjas aceitas: {dyn['forged_accepted']} | censuras aceitas: {dyn['censored_accepted']}")
+        print(f"  Divisões da cadeia: {dyn['chain_split_rounds']} | cópias no fim: {dyn['n_chains_final']}")
+        print(f"  Correções bloqueadas: {dyn['oracle_blocked_rounds']} de {dyn['oracle_rounds']}")
+        print(f"  Massa de poder do conluio no fim: {dyn['malicious_power_mass_final']:.3f}")
+        print(f"  Saltos médios / máximo: {dyn['mean_hops']} / {dyn['max_hops']} (grau {dyn['graph_max_degree']})")
     print("\nReputação final média por perfil:")
     for profile, value in sorted(summary["final_reputation_by_profile"].items()):
         print(f"  {profile:<10} {value:.3f}")
@@ -198,7 +335,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Uma rodada de teste a cada N rodadas (padrão: 10 → rodadas 10, 20, 30, …).",
     )
     parser.add_argument("--alpha", type=float, default=0.3, help="Taxa de aprendizado (EMA).")
-    parser.add_argument("--seed", type=int, default=42, help="Semente para reprodutibilidade.")
+    parser.add_argument("--seed", type=int, default=42, help="Identificador da repetição (semente do gerador aleatório).")
     parser.add_argument(
         "--honest-accuracy", type=float, default=0.9,
         help="Probabilidade de acerto de um nó honesto.",
@@ -240,6 +377,37 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--no-row-sync", action="store_false", dest="row_sync", default=True,
         help="Não sincroniza cada linha de CSV em disco (mais rápido em lote).",
     )
+    parser.add_argument("--quiet", action="store_true", help="Não imprime o resumo.")
+    # Orquestrador eleito.
+    parser.add_argument(
+        "--orchestration", choices=ORCHESTRATIONS, default="fixed",
+        help="fixed = orquestrador central de hoje; dynamic = líder eleito a cada rodada.",
+    )
+    parser.add_argument(
+        "--signal", choices=SIGNALS, default="truth",
+        help="Sinal da reputação: truth (gabarito), consensus ou hybrid.",
+    )
+    parser.add_argument("--topology", choices=KINDS, default="star", help="Grafo entre os nós.")
+    parser.add_argument("--degree", type=int, default=4, help="Vizinhos por nó no grafo kregular.")
+    parser.add_argument(
+        "--leader-attack", choices=behavior.LEADER_ATTACKS, default="none", dest="leader_attack",
+        help="Ataque do líder malicioso.",
+    )
+    parser.add_argument(
+        "--auditor-attack", choices=behavior.AUDITOR_ATTACKS, default="none", dest="auditor_attack",
+        help="Ataque do auditor malicioso.",
+    )
+    parser.add_argument(
+        "--defense", choices=preset_names(), default="none",
+        help="Preset das medidas contra conluio (ablação).",
+    )
+    parser.add_argument("--calibration-rounds", type=int, default=None, dest="calibration_rounds")
+    parser.add_argument("--consensus-alpha", type=float, default=None, dest="consensus_alpha")
+    parser.add_argument("--oracle-alpha", type=float, default=None, dest="oracle_alpha")
+    parser.add_argument("--split-alpha", action="store_true", dest="split_alpha")
+    parser.add_argument("--oracle-bypasses-quorum", action="store_true", dest="oracle_bypasses_quorum")
+    parser.add_argument("--split-scores", action="store_true", dest="split_scores")
+    parser.add_argument("--refuse-forged", action="store_true", dest="refuse_forged")
     return parser.parse_args(argv)
 
 

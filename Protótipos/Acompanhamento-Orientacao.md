@@ -118,3 +118,51 @@ A rodada de avaliação deixou de ser indefinida. Em todos os experimentos há u
 A matriz foi reexecutada em `sistema/results/matrix_testes_fixos/` (840 execuções). Os gráficos em LaTeX e a leitura dos números estão em `sistema/resultados/rodadas_teste_fixas/`. As execuções anteriores não foram apagadas.
 
 Outras topologias, além da estrela, continuam para o próximo ciclo.
+
+---
+
+## Orquestrador dinâmico — líder eleito, auditoria e quórum
+
+O orquestrador fixo foi trocado por um líder eleito a cada rodada entre os próprios nós. A reputação fica numa cadeia de registros encadeados por hash, e cada nó guarda e confere a sua cópia. Os nós só conhecem os vizinhos do grafo. Leitura completa em [analise.md](sistema/resultados/orquestrador_dinamico/analise.md) e texto para o artigo em [texto_resultados.md](sistema/resultados/orquestrador_dinamico/texto_resultados.md).
+
+### Check: solicitado × entregue
+
+| # | Solicitado | Status | Entregue / Onde está |
+|---|------------|:------:|----------------------|
+| 1 | Orquestrador = nó de **maior score e disponibilidade**, mudando a cada rodada | ✅ Feito | [core/election.py](sistema/core/election.py): disponível = no máximo 1 ausência nas últimas 5 rodadas; maior score sem repetir o líder anterior; rodízio enquanto os scores estão empatados. Nenhum nó liderou duas rodadas seguidas |
+| 2 | **Segundo melhor nó audita** | ✅ Feito | Auditor = melhor nó disponível a pelo menos 2 saltos do líder. Veto falso do auditor nunca anulou rodada e custa reputação a ele |
+| 3 | Nós **conhecem só os vizinhos** e o histórico dos outros | ✅ Feito | [core/topology.py](sistema/core/topology.py) (grafo 4-regular) e [core/ledger.py](sistema/core/ledger.py) (cadeia com hash); nos containers cada nó recebe `NEIGHBORS` e guarda a própria cadeia ([node/app.py](sistema/node/app.py)) |
+| 4 | Impedir que o líder **manipule os scores** | ✅ Feito | [core/protocol.py](sistema/core/protocol.py): cada nó refaz a conta e confere a própria resposta; forja e censura são recusadas; quórum por massa de reputação. Até 50% de maliciosos, nenhuma forja ou censura aceita |
+| 5 | Conceitos de **grafos, blockchain e computação distribuída** | ✅ Feito | Difusão por vizinhos com repasse, cadeia encadeada por hash, quórum ponderado, divisão da rede (fork) quando os honestos recusam um registro aprovado |
+| 6 | Maliciosos **em maioria** não quebrarem a rede | ⚠️ Parcial | Com todas as defesas, 65% em 20 nós dá 1,000 nos testes e 71% em 7 nós dá 0,880, igual ao fixo. A proteção acima de 50% é a **divisão**: os honestos saem com a própria cadeia |
+| 7 | Medidas contra conluio, testadas uma a uma | ✅ Feito | [core/defenses.py](sistema/core/defenses.py): calibração, gabarito fora do quórum, taxas separadas, dois scores, recusa. A ablação mostra que a recusa é necessária com maioria maliciosa; calibração e taxas ajudam em 50% |
+| 8 | Sinal **híbrido** (consenso + gabarito) | ✅ Feito | `--signal hybrid`: gabarito nas 3 rodadas de calibração e nas de teste. Só consenso cai para 0 com 50% ou mais de maliciosos |
+| 9 | Rodar **em containers** e comparar com a simulação | ✅ Feito | `/lead /task /verify /commit /oracle /ledger /leader` nos nós; [orchestrator/run.py](sistema/orchestrator/run.py) vira coordenador; [gen_compose.py](sistema/scripts/gen_compose.py) gera `PEERS`/`NEIGHBORS`. 4, 10 e 20 nós batem com a simulação ([docker_vs_simulacao.md](sistema/resultados/orquestrador_dinamico/docker_vs_simulacao.md)) |
+| 10 | Trocar "semente" por um nome mais claro | ✅ Feito | "repetição" nos textos, legendas e scripts de documento. `--seed`, `seed:` e colunas de CSV (`n_sementes`, `semente`) ficaram como estavam |
+| 11 | Resumo no mesmo formato dos anteriores | ✅ Feito | [analise.md](sistema/resultados/orquestrador_dinamico/analise.md), [texto_resultados.md](sistema/resultados/orquestrador_dinamico/texto_resultados.md), [graficos.tex](sistema/resultados/orquestrador_dinamico/graficos.tex) e esta seção |
+
+**Legenda:** ✅ concluído · ⚠️ funciona com ressalva.
+
+### O que funcionou
+
+- **Acurácia:** a mesma acurácia de teste do orquestrador fixo em 20 nós (1,000 com 25%, 50% e 65% em conluio). A recuperação vem no mesmo prazo ou antes (rodada 2,0 contra 3,7 em 65%).
+- **Liderança:** depois da calibração, nenhum líder malicioso com todas as defesas.
+- **Ataques sem efeito:** forja, censura e veto falso não passam com a maioria honesta.
+- **Escala:** no 4-regular os saltos crescem devagar (2,0 em 7 nós, 5,8 em 120) e cada nó mantém 4 conexões.
+- **Containers e simulação:** os 43 testes unitários passam, inclusive a regressão do modo fixo e a paridade entre o código dos containers e a simulação.
+
+### O que não funcionou ou ficou com ressalva
+
+- **Liderança concentrada:** os dois maiores scores ficam com 76% a 98% das rodadas. A regra precisa de algo que espalhe o papel (sorteio ponderado ou carência).
+- **Conluio em maioria:** acima de 50% a rede se divide, em vez de o quórum barrar o ataque. Um cliente externo precisa saber qual cadeia seguir.
+- **Só consenso:** sem gabarito, a acurácia cai para 0 com 50% ou mais de maliciosos.
+- **Auditor em rede pequena:** em 7 nós, só 2 nós ficam a 2 saltos do líder, e um malicioso de reputação baixa vira auditor com frequência. É inofensivo, mas o papel de auditor fica sem uso.
+- **Votos sem assinatura:** identidade e ataques Sybil ficam para a próxima etapa.
+
+### Mudanças em relação ao plano
+
+- A largada termina quando o maior e o menor score se afastam 0,05.
+- `star` é o grafo completo.
+- O líder só é punido quando a anulação tem motivo verificável.
+- Os nós de outra cadeia repassam mensagens sem processá-las.
+- Entrou um bloco de auditor malicioso na matriz.

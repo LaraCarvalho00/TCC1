@@ -42,6 +42,8 @@ def process_round(
     tracker: ReputationTracker,
     logger: MetricsLogger,
     is_test: bool = False,
+    signal: str = "truth",
+    alpha: Optional[float] = None,
 ) -> RoundResult:
     """Processa uma rodada completa após a coleta de respostas.
 
@@ -71,6 +73,12 @@ def process_round(
         ``True`` quando esta rodada é uma rodada de teste fixa
         (uma a cada ``test_every`` rodadas). A reputação continua
         sendo atualizada; o flag só marca o ponto de avaliação.
+    signal : str
+        Sinal da reputação: ``"truth"`` (acerto contra o gabarito, padrão) ou
+        ``"consensus"`` (concordância com o consenso ponderado da rodada).
+        A coluna ``correct`` dos CSVs continua medindo acerto contra o gabarito.
+    alpha : float, optional
+        Taxa usada só nesta rodada (``None`` = taxa do tracker).
 
     Returns
     -------
@@ -96,33 +104,18 @@ def process_round(
     )
 
     # 4. Métricas de dispersão das respostas desta rodada.
-    numeric_answers: list[float] = []
-    n_absent = 0
-    for r in responses:
-        if r.answer is None:
-            n_absent += 1
-        else:
-            try:
-                numeric_answers.append(float(r.answer))
-            except (TypeError, ValueError):
-                pass
-
-    n_distinct = len(set(normalize(r.answer) for r in responses if r.answer is not None))
-    std_answers: Optional[float] = None
-    median_answers: Optional[float] = None
-    mad_answers: Optional[float] = None
-    if len(numeric_answers) >= 2:
-        std_answers = statistics.stdev(numeric_answers)
-    if numeric_answers:
-        median_answers = statistics.median(numeric_answers)
-        deviations = [abs(v - median_answers) for v in numeric_answers]
-        mad_answers = statistics.median(deviations)
+    dispersion = answer_dispersion(responses)
 
     # 5. Atualização de reputação + log por nó.
     for response in responses:
         correct = response.answer is not None and response.answer == expected
+        if signal == "consensus":
+            signal_ok = response.answer is not None and response.answer == cons_w.answer
+        else:
+            signal_ok = correct
         weight_used = weights_before.get(response.node_id, tracker.initial)
-        rep_update = tracker.update(response.node_id, correct)
+        rep_update = tracker.update(response.node_id, signal_ok, alpha=alpha)
+        result.updates[response.node_id] = rep_update
 
         # Erros absoluto e relativo (observacionais, não usados no score).
         abs_error: Optional[float] = None
@@ -164,11 +157,7 @@ def process_round(
     logger.record_round(
         result,
         num_nodes=len(responses),
-        n_distinct_answers=n_distinct,
-        n_absent=n_absent,
-        std_answers=std_answers,
-        median_answers=median_answers,
-        mad_answers=mad_answers,
+        **dispersion,
         consensus_margin_weighted=cons_w.margin,
         consensus_margin_majority=cons_m.margin,
         is_tie_weighted=cons_w.is_tie,
@@ -177,3 +166,35 @@ def process_round(
     )
 
     return result
+
+
+def answer_dispersion(responses: list[NodeResponse]) -> dict:
+    """Ausências, valores distintos, desvio padrão, mediana e MAD das respostas."""
+    numeric_answers: list[float] = []
+    n_absent = 0
+    for r in responses:
+        if r.answer is None:
+            n_absent += 1
+        else:
+            try:
+                numeric_answers.append(float(r.answer))
+            except (TypeError, ValueError):
+                pass
+
+    n_distinct = len(set(normalize(r.answer) for r in responses if r.answer is not None))
+    std_answers: Optional[float] = None
+    median_answers: Optional[float] = None
+    mad_answers: Optional[float] = None
+    if len(numeric_answers) >= 2:
+        std_answers = statistics.stdev(numeric_answers)
+    if numeric_answers:
+        median_answers = statistics.median(numeric_answers)
+        deviations = [abs(v - median_answers) for v in numeric_answers]
+        mad_answers = statistics.median(deviations)
+    return {
+        "n_distinct_answers": n_distinct,
+        "n_absent": n_absent,
+        "std_answers": std_answers,
+        "median_answers": median_answers,
+        "mad_answers": mad_answers,
+    }

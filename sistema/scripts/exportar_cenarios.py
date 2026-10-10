@@ -1,7 +1,7 @@
 """Agrega a matriz reexecutada em CSVs por cenário.
 
 Não altera o experimento. Lê ``rounds.csv`` e ``per_node.csv`` de cada
-execução e grava a média entre as sementes.
+execução e grava a média entre as repetições.
 
 Uso::
 

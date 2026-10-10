@@ -10,6 +10,19 @@ Os três perfis previstos no trabalho:
 
 Nenhum destes recebe o ground truth no processo real; a dependência de
 ``expected`` aqui existe só para reproduzir o comportamento em simulação.
+
+Com o orquestrador eleito, o nó malicioso também pode atacar quando ocupa um
+papel na rodada:
+
+* líder ``censor``          : tira do registro as respostas de quem não é do conluio.
+* líder ``forge``           : infla a reputação do conluio no estado proposto.
+* líder ``false_consensus`` : publica o valor do conluio como consenso.
+* auditor ``false_reject``  : veta uma proposta honesta alegando forja.
+
+Fora desses papéis, o malicioso confirma tudo o que um líder do conluio propõe,
+vota como um nó honesto nas propostas honestas e, quando a correção pelo
+gabarito passa por votação, vota contra ela. Se a correção é aplicada sem
+votação, ele a aceita: recusar só o tiraria da rede.
 """
 
 from __future__ import annotations
@@ -24,6 +37,49 @@ HONEST = "honest"
 MALICIOUS = "malicious"
 UNSTABLE = "unstable"
 PROFILES = (HONEST, MALICIOUS, UNSTABLE)
+
+LEADER_ATTACKS = ("none", "censor", "forge", "false_consensus")
+AUDITOR_ATTACKS = ("none", "false_reject")
+
+
+@dataclass(frozen=True)
+class AttackConfig:
+    leader_attack: str = "none"
+    auditor_attack: str = "none"
+
+    def __post_init__(self) -> None:
+        if self.leader_attack not in LEADER_ATTACKS:
+            raise ValueError(f"leader_attack deve ser um de {LEADER_ATTACKS!r}.")
+        if self.auditor_attack not in AUDITOR_ATTACKS:
+            raise ValueError(f"auditor_attack deve ser um de {AUDITOR_ATTACKS!r}.")
+
+
+def leader_attack(profile: str, config: AttackConfig) -> Optional[str]:
+    """Ataque aplicado pelo líder desta rodada (``None`` = proposta honesta)."""
+    if profile != MALICIOUS or config.leader_attack == "none":
+        return None
+    return config.leader_attack
+
+
+def malicious_vote(
+    *,
+    leader_is_colluder: bool,
+    is_auditor: bool,
+    honest_ok: bool,
+    honest_reason: str,
+    config: AttackConfig,
+) -> tuple[bool, str]:
+    """Voto ``(confirma, motivo)`` de um nó malicioso sobre uma proposta."""
+    if leader_is_colluder:
+        return True, ""
+    if is_auditor and config.auditor_attack == "false_reject":
+        return False, "forged"
+    return honest_ok, honest_reason
+
+
+def malicious_oracle_vote() -> bool:
+    """O conluio vota contra a correção pelo gabarito quando ela é votada."""
+    return False
 
 
 @dataclass

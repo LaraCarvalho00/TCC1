@@ -1,0 +1,345 @@
+[
+  {
+    "scenario": {
+      "nodes": 4,
+      "malicious": 0.25,
+      "unstable": 0.0,
+      "collusion_value": null,
+      "mechanism": "ema"
+    },
+    "summary": {
+      "rounds": 50,
+      "consensus_accuracy_weighted": 1.0,
+      "consensus_accuracy_majority": 1.0,
+      "test_rounds": [
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "n_test_rounds": 5,
+      "consensus_accuracy_weighted_on_tests": 1.0,
+      "consensus_accuracy_majority_on_tests": 1.0,
+      "tests": [
+        {
+          "round": 10,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 20,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 30,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 40,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 50,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        }
+      ],
+      "mean_latency_ms": 340.5,
+      "final_reputation_by_profile": {
+        "malicious": 0.0,
+        "honest": 0.992
+      },
+      "final_reputation_by_node": {
+        "node-0": 0.0,
+        "node-1": 0.9928,
+        "node-2": 0.9976,
+        "node-3": 0.9857
+      },
+      "mean_reputation_by_profile_across_rounds": {
+        "malicious": 0.0233,
+        "honest": 0.8837
+      }
+    }
+  },
+  {
+    "scenario": {
+      "nodes": 4,
+      "malicious": 0.5,
+      "unstable": 0.0,
+      "collusion_value": 999,
+      "mechanism": "ema"
+    },
+    "summary": {
+      "rounds": 50,
+      "consensus_accuracy_weighted": 0.94,
+      "consensus_accuracy_majority": 0.8,
+      "test_rounds": [
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "n_test_rounds": 5,
+      "consensus_accuracy_weighted_on_tests": 0.6,
+      "consensus_accuracy_majority_on_tests": 0.4,
+      "tests": [
+        {
+          "round": 10,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 20,
+          "consensus_weighted_correct": 0,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 30,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 40,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 50,
+          "consensus_weighted_correct": 0,
+          "consensus_majority_correct": 0
+        }
+      ],
+      "mean_latency_ms": 339.8,
+      "final_reputation_by_profile": {
+        "malicious": 0.0,
+        "honest": 0.7678
+      },
+      "final_reputation_by_node": {
+        "node-0": 0.0,
+        "node-1": 0.0,
+        "node-2": 0.7,
+        "node-3": 0.8356
+      },
+      "mean_reputation_by_profile_across_rounds": {
+        "malicious": 0.0233,
+        "honest": 0.8875
+      }
+    }
+  },
+  {
+    "scenario": {
+      "nodes": 7,
+      "malicious": 0.65,
+      "unstable": 0.0,
+      "collusion_value": 999,
+      "mechanism": "beta"
+    },
+    "summary": {
+      "rounds": 50,
+      "consensus_accuracy_weighted": 0.86,
+      "consensus_accuracy_majority": 0.0,
+      "test_rounds": [
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "n_test_rounds": 5,
+      "consensus_accuracy_weighted_on_tests": 1.0,
+      "consensus_accuracy_majority_on_tests": 0.0,
+      "tests": [
+        {
+          "round": 10,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 20,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 30,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 40,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 50,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        }
+      ],
+      "mean_latency_ms": 342.1,
+      "final_reputation_by_profile": {
+        "malicious": 0.0192,
+        "honest": 0.8942
+      },
+      "final_reputation_by_node": {
+        "node-0": 0.0192,
+        "node-1": 0.0192,
+        "node-2": 0.0192,
+        "node-3": 0.0192,
+        "node-4": 0.0192,
+        "node-5": 0.9038,
+        "node-6": 0.8846
+      },
+      "mean_reputation_by_profile_across_rounds": {
+        "malicious": 0.0608,
+        "honest": 0.8956
+      }
+    }
+  },
+  {
+    "scenario": {
+      "nodes": 10,
+      "malicious": 0.5,
+      "unstable": 0.0,
+      "collusion_value": 999,
+      "mechanism": "ema_asymmetric"
+    },
+    "summary": {
+      "rounds": 50,
+      "consensus_accuracy_weighted": 1.0,
+      "consensus_accuracy_majority": 0.46,
+      "test_rounds": [
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "n_test_rounds": 5,
+      "consensus_accuracy_weighted_on_tests": 1.0,
+      "consensus_accuracy_majority_on_tests": 0.2,
+      "tests": [
+        {
+          "round": 10,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 20,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 30,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 40,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        },
+        {
+          "round": 50,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 0
+        }
+      ],
+      "mean_latency_ms": 339.0,
+      "final_reputation_by_profile": {
+        "malicious": 0.0001,
+        "honest": 0.9047
+      },
+      "final_reputation_by_node": {
+        "node-0": 0.0001,
+        "node-1": 0.0001,
+        "node-2": 0.0001,
+        "node-3": 0.0001,
+        "node-4": 0.0001,
+        "node-5": 0.8395,
+        "node-6": 0.9988,
+        "node-7": 0.8181,
+        "node-8": 1.0,
+        "node-9": 0.8671
+      },
+      "mean_reputation_by_profile_across_rounds": {
+        "malicious": 0.0566,
+        "honest": 0.9138
+      }
+    }
+  },
+  {
+    "scenario": {
+      "nodes": 6,
+      "malicious": 0.33,
+      "unstable": 0.17,
+      "collusion_value": null,
+      "mechanism": "ema"
+    },
+    "summary": {
+      "rounds": 50,
+      "consensus_accuracy_weighted": 1.0,
+      "consensus_accuracy_majority": 0.98,
+      "test_rounds": [
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "n_test_rounds": 5,
+      "consensus_accuracy_weighted_on_tests": 1.0,
+      "consensus_accuracy_majority_on_tests": 1.0,
+      "tests": [
+        {
+          "round": 10,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 20,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 30,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 40,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        },
+        {
+          "round": 50,
+          "consensus_weighted_correct": 1,
+          "consensus_majority_correct": 1
+        }
+      ],
+      "mean_latency_ms": 551.1,
+      "final_reputation_by_profile": {
+        "malicious": 0.0,
+        "unstable": 0.5621,
+        "honest": 0.9193
+      },
+      "final_reputation_by_node": {
+        "node-0": 0.0,
+        "node-1": 0.0,
+        "node-2": 0.5621,
+        "node-3": 0.9955,
+        "node-4": 0.8148,
+        "node-5": 0.9475
+      },
+      "mean_reputation_by_profile_across_rounds": {
+        "malicious": 0.0233,
+        "unstable": 0.3371,
+        "honest": 0.8671
+      }
+    }
+  }
+]

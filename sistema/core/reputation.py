@@ -94,29 +94,37 @@ class ReputationTracker:
         self._failures: dict[str, float] = {nid: 1.0 for nid in ids}
 
     # ------------------------------------------------------------------
-    def update(self, node_id: str, correct: bool) -> ReputationUpdate:
+    def update(self, node_id: str, correct: bool, alpha: Optional[float] = None) -> ReputationUpdate:
         """Atualiza a reputação do nó e retorna o registro estruturado.
 
         A fórmula e os pesos utilizados são registrados no objeto retornado,
         permitindo auditoria completa de cada mudança de score.
+
+        ``alpha`` substitui a taxa só nesta chamada (sinal de consenso, gabarito
+        ou punição). Em ``ema_asymmetric`` a descida mantém a proporção
+        ``alpha_down / alpha``; em ``beta`` a contagem cresce ``alpha / self.alpha``
+        em vez de 1. Sem ``alpha``, o comportamento é o original.
         """
         s = 1.0 if correct else 0.0
         before = self.reputation.get(node_id, self.initial)
+        rate = self.alpha if alpha is None else alpha
 
         if self.mechanism == "ema":
-            alpha_used = self.alpha
-            after = (1.0 - self.alpha) * before + self.alpha * s
+            alpha_used = rate
+            after = (1.0 - rate) * before + rate * s
 
         elif self.mechanism == "ema_asymmetric":
             # Subida usa alpha completo; descida usa alpha_down (mais lenta).
-            alpha_used = self.alpha if correct else self.alpha_down
+            down = self.alpha_down if alpha is None else rate * self.alpha_down / self.alpha
+            alpha_used = rate if correct else down
             after = (1.0 - alpha_used) * before + alpha_used * s
 
         else:  # beta — distribuição Beta com prior uniforme Beta(1,1)
+            weight = 1.0 if alpha is None else rate / self.alpha
             if correct:
-                self._successes[node_id] = self._successes.get(node_id, 1.0) + 1.0
+                self._successes[node_id] = self._successes.get(node_id, 1.0) + weight
             else:
-                self._failures[node_id] = self._failures.get(node_id, 1.0) + 1.0
+                self._failures[node_id] = self._failures.get(node_id, 1.0) + weight
             s_cnt = self._successes.get(node_id, 1.0)
             f_cnt = self._failures.get(node_id, 1.0)
             after = s_cnt / (s_cnt + f_cnt)
@@ -148,3 +156,38 @@ class ReputationTracker:
     def get(self, node_id: str) -> float:
         """Retorna a reputação atual do nó (ou o valor inicial se não registrado)."""
         return self.reputation.get(node_id, self.initial)
+
+    def counts(self, node_id: str) -> tuple[float, float]:
+        """Contagens ``(acertos, erros)`` do mecanismo ``beta`` (prior incluído)."""
+        return self._successes.get(node_id, 1.0), self._failures.get(node_id, 1.0)
+
+    # ------------------------------------------------------------------
+    def clone(self) -> "ReputationTracker":
+        """Cópia independente, para recalcular uma rodada sem efeito colateral."""
+        twin = ReputationTracker(
+            list(self.reputation),
+            alpha=self.alpha,
+            initial=self.initial,
+            mechanism=self.mechanism,
+            alpha_down=self.alpha_down,
+        )
+        twin.restore(self.snapshot())
+        twin.history = {nid: list(values) for nid, values in self.history.items()}
+        return twin
+
+    def snapshot(self) -> dict:
+        """Estado mínimo que reproduz a reputação (entra no hash do registro)."""
+        state = {"reputation": {nid: round(value, 12) for nid, value in sorted(self.reputation.items())}}
+        if self.mechanism == "beta":
+            state["successes"] = {nid: round(v, 12) for nid, v in sorted(self._successes.items())}
+            state["failures"] = {nid: round(v, 12) for nid, v in sorted(self._failures.items())}
+        return state
+
+    def restore(self, state: dict) -> None:
+        """Adota um estado produzido por :meth:`snapshot`."""
+        for nid, value in state["reputation"].items():
+            self.reputation[nid] = float(value)
+            self.history.setdefault(nid, [self.initial])
+        if self.mechanism == "beta":
+            self._successes.update({nid: float(v) for nid, v in state.get("successes", {}).items()})
+            self._failures.update({nid: float(v) for nid, v in state.get("failures", {}).items()})
