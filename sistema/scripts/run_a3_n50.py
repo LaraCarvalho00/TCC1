@@ -21,7 +21,7 @@ import time
 
 from sistema.simulate import run_simulation
 
-_BASE = os.path.join(os.path.dirname(__file__), "..", "resultados", "a3_n50")
+_BASE = os.path.join(os.path.dirname(__file__), "..", "resultados", "artigo_n50")
 _FRACTIONS = (0.0, 0.25, 0.5, 0.65)
 _SEEDS = range(5)
 
@@ -75,7 +75,7 @@ def _cells() -> list[dict]:
             mal = int(round(frac * 100))
             cells.append(dict(
                 label="fixo_hibrido",
-                exp_id=f"a3_n50_fixo_hibrido_m{mal:02d}_s{seed:02d}",
+                exp_id=f"fixo_com_gabarito/m{mal:02d}/s{seed:02d}",
                 malicious=frac, seed=seed,
                 orchestration="fixed", signal="hybrid", defense="none",
                 topology="star", leader_attack="none",
@@ -83,7 +83,7 @@ def _cells() -> list[dict]:
             attack = "forge" if frac > 0 else "none"
             cells.append(dict(
                 label="dinamico_hibrido",
-                exp_id=f"a3_n50_dinamico_hibrido_m{mal:02d}_s{seed:02d}",
+                exp_id=f"dinamico_com_gabarito/m{mal:02d}/s{seed:02d}",
                 malicious=frac, seed=seed,
                 orchestration="dynamic", signal="hybrid", defense="all",
                 topology="kregular", leader_attack=attack,
@@ -91,7 +91,7 @@ def _cells() -> list[dict]:
             if frac in (0.5, 0.65):
                 cells.append(dict(
                     label="dinamico_so_consenso",
-                    exp_id=f"a3_n50_dinamico_consenso_m{mal:02d}_s{seed:02d}",
+                    exp_id=f"dinamico_sem_gabarito/m{mal:02d}/s{seed:02d}",
                     malicious=frac, seed=seed,
                     orchestration="dynamic", signal="consensus", defense="all",
                     topology="kregular", leader_attack=attack,

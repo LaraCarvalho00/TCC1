@@ -1,6 +1,7 @@
-"""Figuras da nota do A3: 50 nós, três colunas, cinco repetições.
+"""Figuras do artigo: 50 nós, cinco repetições.
 
-Lê ``sistema/resultados/a3_n50`` e grava os PNG em ``figuras/``.
+Lê ``sistema/resultados/artigo_n50`` e grava os PNG em ``figuras/`` dessa pasta.
+As cópias usadas no texto ficam em ``artigo/figuras``.
 """
 from __future__ import annotations
 
@@ -13,9 +14,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-_BASE = os.path.join(os.path.dirname(__file__), "..", "resultados", "a3_n50")
-_ESCALA = os.path.join(os.path.dirname(__file__), "..", "resultados", "escala_artigo", "runs")
-_OUT = os.path.join(_BASE, "figuras")
+_ARTIGO = os.path.join(os.path.dirname(__file__), "..", "resultados", "artigo_n50")
+_OUT = os.path.join(_ARTIGO, "figuras")
+_PASTA = {
+    "fixo_hibrido": "fixo_com_gabarito",
+    "dinamico_hibrido": "dinamico_com_gabarito",
+    "dinamico_so_consenso": "dinamico_sem_gabarito",
+}
 
 # Mesma gramática visual da grade que a orientadora já viu:
 # círculo, triângulo e estrela, cada um com cor e tipo de linha próprios.
@@ -52,8 +57,12 @@ def _style_ax(ax) -> None:
 
 
 def _index() -> list[dict]:
-    with open(os.path.join(_BASE, "indice.csv"), encoding="utf-8") as fh:
+    with open(os.path.join(_ARTIGO, "indice.csv"), encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
+
+
+def _run_file(label: str, pct: int, seed: int, name: str) -> str:
+    return os.path.join(_ARTIGO, _PASTA[label], f"m{pct:02d}", f"s{seed:02d}", name)
 
 
 def _mean(values: list[float]) -> float:
@@ -117,22 +126,14 @@ def fig_acuracia(rows: list[dict]) -> None:
     plt.close(fig)
 
 
-def _acerto_por_rodada(rows: list[dict]) -> dict[tuple[str, float], list[float]]:
-    series: dict[tuple[str, float], dict[int, list[int]]] = defaultdict(
-        lambda: defaultdict(list)
-    )
-    for row in rows:
-        path = os.path.join(_BASE, row["experiment_id"], "rounds.csv")
-        key = (row["label"], float(row["malicious_frac"]))
-        with open(path, encoding="utf-8") as fh:
-            for record in csv.DictReader(fh):
-                series[key][int(record["round_index"])].append(
-                    int(record["consensus_correct"])
-                )
-    means = {}
-    for key, by_round in series.items():
-        means[key] = [_mean(by_round[i]) for i in range(50)]
-    return means
+def _acerto_por_rodada(frac: float) -> dict[str, list[float]]:
+    pct = int(round(frac * 100))
+    return {
+        label: _means_from_rounds([
+            _run_file(label, pct, seed, "rounds.csv") for seed in range(5)
+        ])
+        for label, *_rest in SERIES
+    }
 
 
 def _means_from_rounds(paths: list[str]) -> list[float]:
@@ -144,22 +145,7 @@ def _means_from_rounds(paths: list[str]) -> list[float]:
     return [_mean(by_round[i]) for i in range(50)]
 
 
-def _trajetoria_80() -> dict[str, list[float]]:
-    """80% no mesmo protocolo: fixo e dinâmico com gabarito já salvos na escala."""
-    folders = {
-        "fixo_hibrido": os.path.join(_ESCALA, "n50_r50_fixo_hibrido_m80_s{seed:02d}", "rounds.csv"),
-        "dinamico_hibrido": os.path.join(_ESCALA, "n50_r50_dinamico_hibrido_m80_s{seed:02d}", "rounds.csv"),
-        "dinamico_so_consenso": os.path.join(_BASE, "a3_n50_dinamico_consenso_m80_s{seed:02d}", "rounds.csv"),
-    }
-    return {
-        label: _means_from_rounds([pattern.format(seed=seed) for seed in range(5)])
-        for label, pattern in folders.items()
-    }
-
-
-def fig_trajetoria(rows: list[dict]) -> None:
-    means = _acerto_por_rodada(rows)
-    extra = _trajetoria_80()
+def fig_trajetoria() -> None:
     fig, axes = plt.subplots(1, 3, figsize=(12.6, 4.4), sharey=True)
     plt.rcParams.update({
         "axes.labelsize": 13,
@@ -172,8 +158,9 @@ def fig_trajetoria(rows: list[dict]) -> None:
     marks = ((0, 10), (4, 10), (7, 10))
     titles = {0.5: "(a) 50% de maliciosos", 0.65: "(b) 65% de maliciosos", 0.8: "(c) 80% de maliciosos"}
     for ax, frac in zip(axes, (0.5, 0.65, 0.8)):
+        series_by_label = _acerto_por_rodada(frac)
         for (label, color, marker, linestyle, legend), markevery in zip(SERIES, marks):
-            series = extra[label] if frac == 0.8 else means[(label, frac)]
+            series = series_by_label[label]
             ax.plot(
                 rounds,
                 series,
@@ -218,24 +205,22 @@ def _rep_from_paths(pattern: str) -> dict[str, list[float]]:
     }
 
 
+def _rep_pattern(label: str, pct: int) -> str:
+    return os.path.join(
+        _ARTIGO, _PASTA[label], f"m{pct:02d}", "s{seed:02d}", "reputation_history.csv",
+    )
+
+
 def _reputacao_dinamico() -> dict[str, dict[str, dict[str, list[float]]]]:
     """50% tem uma cadeia. Em 80% a média do malicioso é a outra cópia."""
     return {
         "50": {
-            "com_gabarito": _rep_from_paths(os.path.join(
-                _BASE, "a3_n50_dinamico_hibrido_m50_s{seed:02d}", "reputation_history.csv",
-            )),
-            "sem_gabarito": _rep_from_paths(os.path.join(
-                _BASE, "a3_n50_dinamico_consenso_m50_s{seed:02d}", "reputation_history.csv",
-            )),
+            "com_gabarito": _rep_from_paths(_rep_pattern("dinamico_hibrido", 50)),
+            "sem_gabarito": _rep_from_paths(_rep_pattern("dinamico_so_consenso", 50)),
         },
         "80": {
-            "com_gabarito": _rep_from_paths(os.path.join(
-                _ESCALA, "n50_r50_dinamico_hibrido_m80_s{seed:02d}", "reputation_history.csv",
-            )),
-            "sem_gabarito": _rep_from_paths(os.path.join(
-                _BASE, "a3_n50_dinamico_consenso_m80_s{seed:02d}", "reputation_history.csv",
-            )),
+            "com_gabarito": _rep_from_paths(_rep_pattern("dinamico_hibrido", 80)),
+            "sem_gabarito": _rep_from_paths(_rep_pattern("dinamico_so_consenso", 80)),
         },
     }
 
@@ -300,7 +285,7 @@ def main() -> None:
     os.makedirs(_OUT, exist_ok=True)
     rows = _index()
     fig_acuracia(rows)
-    fig_trajetoria(rows)
+    fig_trajetoria()
     curves = fig_reputacao()
     for frac in ("50", "80"):
         for key in ("com_gabarito", "sem_gabarito"):

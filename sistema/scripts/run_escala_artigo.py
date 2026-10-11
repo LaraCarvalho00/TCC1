@@ -25,7 +25,9 @@ FRACTIONS = (0.0, 0.05, 0.20, 0.35, 0.50, 0.65, 0.80)
 LADDER = ((50, 5), (100, 1), (200, 1), (400, 1))
 MAX_RUN_S = 90
 
-_BASE = os.path.join(os.path.dirname(__file__), "..", "resultados", "escala_artigo")
+_BASE = os.path.join(
+    os.path.dirname(__file__), "..", "resultados", "fora_do_artigo", "escala_outros_tamanhos",
+)
 _RUNS = os.path.join(_BASE, "runs")
 
 SERIES = {

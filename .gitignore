@@ -1,5 +1,8 @@
 # Resultados de execução e artefatos gerados
 sistema/results/
+# CSVs brutos. Os gráficos do artigo estão em artigo/figuras.
+sistema/resultados/artigo_n50/
+sistema/resultados/fora_do_artigo/
 *.generated.yml
 *.generated.yaml
 
