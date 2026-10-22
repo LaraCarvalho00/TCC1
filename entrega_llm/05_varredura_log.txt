@@ -1,0 +1,2 @@
+Failed to create PreventUserIdleSystemSleep assertion
+1440 execuções -> entrega_llm/05_varredura

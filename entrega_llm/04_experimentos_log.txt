@@ -1,0 +1,2 @@
+Matplotlib is building the font cache; this may take a moment.
+480 execuções, 50 questões -> sistema/resultados/banco_llm/experimentos

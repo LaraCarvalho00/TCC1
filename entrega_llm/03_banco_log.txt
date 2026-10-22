@@ -1,0 +1,56 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Carregando HuggingFaceTB/SmolLM3-3B ...
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/326 [00:00<?, ?it/s]Loading weights:   0%|          | 1/326 [00:00<03:10,  1.71it/s]Loading weights:  34%|███▍      | 111/326 [00:00<00:01, 205.16it/s]Loading weights:  49%|████▉     | 161/326 [00:00<00:00, 210.49it/s]Loading weights:  61%|██████    | 199/326 [00:01<00:00, 195.75it/s]Loading weights:  70%|███████   | 229/326 [00:01<00:00, 100.68it/s]Loading weights:  77%|███████▋  | 250/326 [00:02<00:00, 94.28it/s] Loading weights:  82%|████████▏ | 266/326 [00:02<00:00, 90.63it/s]Loading weights:  86%|████████▌ | 280/326 [00:02<00:00, 96.30it/s]Loading weights:  90%|█████████ | 294/326 [00:02<00:00, 90.99it/s]Loading weights:  95%|█████████▍| 309/326 [00:02<00:00, 89.14it/s]Loading weights:  98%|█████████▊| 320/326 [00:02<00:00, 92.61it/s]Loading weights: 100%|██████████| 326/326 [00:02<00:00, 110.35it/s]
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+[1/50] gsm8k-test-0 gabarito=18 gulosa=18 acertos=20/20 (2.5 min)
+[2/50] gsm8k-test-1 gabarito=3 gulosa=3 acertos=20/20 (4.1 min)
+[3/50] gsm8k-test-2 gabarito=70000 gulosa=70000 acertos=4/20 (8.6 min)
+[4/50] gsm8k-test-3 gabarito=540 gulosa=540 acertos=19/20 (10.5 min)
+[5/50] gsm8k-test-4 gabarito=20 gulosa=-620 acertos=6/20 (15.7 min)
+[6/50] gsm8k-test-5 gabarito=64 gulosa=64 acertos=8/20 (19.7 min)
+[7/50] gsm8k-test-6 gabarito=260 gulosa=260 acertos=20/20 (22.7 min)
+[8/50] gsm8k-test-7 gabarito=160 gulosa=80 acertos=1/20 (28.0 min)
+[9/50] gsm8k-test-8 gabarito=45 gulosa=120 acertos=0/20 (34.0 min)
+[10/50] gsm8k-test-9 gabarito=460 gulosa=460 acertos=20/20 (37.6 min)
+[11/50] gsm8k-test-10 gabarito=366 gulosa=366 acertos=20/20 (40.1 min)
+[12/50] gsm8k-test-11 gabarito=694 gulosa=694 acertos=15/20 (42.8 min)
+[13/50] gsm8k-test-12 gabarito=13 gulosa=12 acertos=0/20 (47.6 min)
+[14/50] gsm8k-test-13 gabarito=18 gulosa=18 acertos=4/20 (53.5 min)
+[15/50] gsm8k-test-14 gabarito=60 gulosa=60 acertos=19/20 (57.0 min)
+[16/50] gsm8k-test-15 gabarito=125 gulosa=125 acertos=12/20 (61.9 min)
+[17/50] gsm8k-test-16 gabarito=230 gulosa=230 acertos=13/20 (65.2 min)
+[18/50] gsm8k-test-17 gabarito=57500 gulosa=57500 acertos=18/20 (69.4 min)
+[19/50] gsm8k-test-18 gabarito=7 gulosa=7 acertos=17/20 (72.9 min)
+[20/50] gsm8k-test-19 gabarito=6 gulosa=6 acertos=15/20 (78.2 min)
+[21/50] gsm8k-test-20 gabarito=15 gulosa=15 acertos=10/20 (83.6 min)
+[22/50] gsm8k-test-21 gabarito=14 gulosa=23 acertos=5/20 (86.9 min)
+[23/50] gsm8k-test-22 gabarito=7 gulosa=7 acertos=17/20 (89.5 min)
+[24/50] gsm8k-test-23 gabarito=8 gulosa=0 acertos=15/20 (92.0 min)
+[25/50] gsm8k-test-24 gabarito=26 gulosa=26 acertos=20/20 (95.0 min)
+[26/50] gsm8k-test-25 gabarito=2 gulosa=2 acertos=20/20 (99.1 min)
+[27/50] gsm8k-test-26 gabarito=243 gulosa=243 acertos=11/20 (102.9 min)
+[28/50] gsm8k-test-27 gabarito=16 gulosa=16 acertos=20/20 (106.4 min)
+[29/50] gsm8k-test-28 gabarito=25 gulosa=25 acertos=14/20 (110.2 min)
+[30/50] gsm8k-test-29 gabarito=104 gulosa=94 acertos=20/20 (113.8 min)
+[31/50] gsm8k-test-30 gabarito=109 gulosa=109 acertos=20/20 (118.5 min)
+[32/50] gsm8k-test-31 gabarito=80 gulosa=80 acertos=20/20 (122.2 min)
+[33/50] gsm8k-test-32 gabarito=35 gulosa=35 acertos=20/20 (124.3 min)
+[34/50] gsm8k-test-33 gabarito=70 gulosa=70 acertos=20/20 (127.7 min)
+[35/50] gsm8k-test-34 gabarito=23 gulosa=23 acertos=20/20 (130.3 min)
+[36/50] gsm8k-test-35 gabarito=9 gulosa=9 acertos=19/20 (133.2 min)
+[37/50] gsm8k-test-36 gabarito=75 gulosa=75 acertos=19/20 (136.6 min)
+[38/50] gsm8k-test-37 gabarito=2 gulosa=13 acertos=0/20 (142.3 min)
+[39/50] gsm8k-test-38 gabarito=10 gulosa=10 acertos=8/20 (147.6 min)
+[40/50] gsm8k-test-39 gabarito=18 gulosa=4 acertos=9/20 (153.4 min)
+[41/50] gsm8k-test-40 gabarito=8 gulosa=8 acertos=20/20 (156.3 min)
+[42/50] gsm8k-test-41 gabarito=200 gulosa=200 acertos=19/20 (159.4 min)
+[43/50] gsm8k-test-42 gabarito=26 gulosa=26 acertos=20/20 (162.0 min)
+[44/50] gsm8k-test-43 gabarito=48 gulosa=240 acertos=15/20 (166.7 min)
+[45/50] gsm8k-test-44 gabarito=20 gulosa=20 acertos=20/20 (170.9 min)
+[46/50] gsm8k-test-45 gabarito=104 gulosa=104 acertos=20/20 (175.5 min)
+[47/50] gsm8k-test-46 gabarito=163 gulosa=277 acertos=10/20 (180.0 min)
+[48/50] gsm8k-test-47 gabarito=800 gulosa=800 acertos=19/20 (184.8 min)
+[49/50] gsm8k-test-48 gabarito=8 gulosa=8 acertos=19/20 (187.3 min)
+[50/50] gsm8k-test-49 gabarito=30 gulosa=30 acertos=20/20 (191.0 min)
+Banco: 50 questões, 1000 amostras, acurácia das amostras 74.0%. Arquivo: sistema/resultados/banco_llm/banco_smol.json
