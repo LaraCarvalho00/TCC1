@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encaminhamento da orientação — cenários, gráficos e equação</title>
+<style>
+  :root {
+    --ink: #1c1917;
+    --muted: #57534e;
+    --line: #e7e5e4;
+    --paper: #fffcf8;
+    --card: #ffffff;
+    --blue: #1d4e89;
+    --blue-soft: #e8f1fa;
+    --orange: #c2410c;
+    --orange-soft: #fff1e8;
+    --green: #166534;
+    --green-soft: #e9f7ee;
+    --amber: #92400e;
+    --amber-soft: #fff6e5;
+    --gray-soft: #f5f5f4;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: #f3f0ea;
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 19px;
+    line-height: 1.45;
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  header.top {
+    background: var(--ink);
+    color: #fff;
+    padding: 36px 20px 28px;
+  }
+  header.top .inner { max-width: 880px; margin: 0 auto; }
+  header.top p { margin: 8px 0 0; color: #d6d3d1; font-size: 17px; }
+  h1 { font-size: 32px; line-height: 1.15; margin: 0; font-weight: 650; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 26px;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+  }
+  h3 { font-size: 20px; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--blue); }
+  nav.steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 22px;
+  }
+  nav.steps a {
+    display: block;
+    background: #292524;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  nav.steps strong { display: block; font-size: 13px; color: #fdba74; font-family: ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 4px; }
+  section {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px 26px 18px;
+    margin-top: 18px;
+  }
+  .lead { font-size: 21px; }
+  .kicker {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  ul { margin: 0 0 12px; padding-left: 1.2em; }
+  li { margin: 0 0 8px; }
+  .cards { display: grid; gap: 10px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card.entra { border-left: 6px solid var(--green); }
+  .card.quebra { border-left: 6px solid var(--amber); }
+  .card.fora { border-left: 6px solid #a8a29e; background: var(--gray-soft); }
+  .tag {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .entra .tag { color: var(--green); }
+  .quebra .tag { color: var(--amber); }
+  .fora .tag { color: #57534e; }
+  .scale-wrap { margin: 8px 0 6px; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 14px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+  .swatch { display: inline-block; width: 18px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .track {
+    position: relative;
+    height: 86px;
+    margin: 28px 8px 36px;
+  }
+  .rail {
+    position: absolute;
+    left: 0; right: 0; top: 34px;
+    height: 10px;
+    background: #e7e5e4;
+    border-radius: 99px;
+  }
+  .band {
+    position: absolute;
+    top: 34px;
+    height: 10px;
+    border-radius: 99px;
+  }
+  .band.bft { background: #93c5fd; width: 33.3%; }
+  .band.eigen {
+    top: 50px;
+    height: 8px;
+    width: 70%;
+    background: #fdba74;
+  }
+  .mark {
+    position: absolute;
+    top: 18px;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    border-radius: 50%;
+    border: 3px solid var(--ink);
+    background: #fff;
+  }
+  .mark.cenario { background: var(--green); border-color: var(--green); }
+  .mark.quebra { background: #fff; border-color: var(--amber); }
+  .mark span {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .axis {
+    display: flex;
+    justify-content: space-between;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: -8px;
+  }
+  .note {
+    background: var(--blue-soft);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 8px;
+  }
+  figure { margin: 8px 0 16px; }
+  figure img { width: 100%; height: auto; background: #fff; border-radius: 12px; border: 1px solid var(--line); }
+  figcaption { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px; color: var(--muted); margin-top: 8px; }
+  .panels { display: grid; gap: 10px; }
+  .panel {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 12px 14px;
+  }
+  .panel b { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px; }
+  .eq {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-size: 28px;
+    text-align: center;
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 10px;
+    border: 1px solid var(--line);
+    margin: 8px 0 14px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    background: #fff;
+  }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); }
+  .quote {
+    font-size: 18px;
+    background: #fff;
+    border-left: 6px solid var(--blue);
+    padding: 14px 16px;
+    border-radius: 0 12px 12px 0;
+  }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 16px; }
+  .small { font-size: 16px; color: var(--muted); }
+  @media (max-width: 700px) {
+    nav.steps { grid-template-columns: 1fr; }
+    body { font-size: 18px; }
+    h1 { font-size: 28px; }
+    section { padding: 18px 14px 12px; }
+  }
+  @media print {
+    body { background: #fff; font-size: 12pt; }
+    header.top { background: #fff; color: #000; padding: 0 0 12px; }
+    header.top p, nav.steps a { color: #000; }
+    nav.steps a { background: #fff; border: 1px solid #ccc; }
+    main { padding: 0; max-width: none; }
+    section { break-inside: avoid; border: none; padding: 8px 0 4px; margin-top: 10px; }
+    figure, .card, .panel { break-inside: avoid; }
+    a { text-decoration: none; color: inherit; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>O que esta entrega responde</h1>
+    <p>Cenários escolhidos a partir dos trabalhos relacionados, os dois gráficos já medidos e o que cada variável da reputação significa. 50 nós, 50 rodadas, cinco repetições. Nada disso é uma execução nova.</p>
+    <nav class="steps">
+      <a href="#metodologia"><strong>1. Literatura</strong>Até onde os trabalhos vão, e o que ficou</a>
+      <a href="#graficos"><strong>2. Gráficos</strong>O que cada curva está dizendo</a>
+      <a href="#equacao"><strong>3. Equação</strong>O que cada símbolo vale aqui</a>
+    </nav>
+  </div>
+</header>
+<main>
+
+<section id="metodologia">
+  <div class="kicker">Metodologia</div>
+  <h2>A literatura para antes da maioria. 65% e 80% são o ponto de quebra.</h2>
+  <p class="lead">A regra da reunião foi esta: o trabalho X testa um comportamento; se o simulador já executa esse comportamento, o cenário entra. O que a literatura não avalia, ou o que pediria um mecanismo novo, fica de fora.</p>
+
+  <div class="scale-wrap">
+    <div class="legend-row">
+      <span><i class="swatch" style="background:#93c5fd"></i>Lamport (1982) e PBFT (1999): menos de um terço</span>
+      <span><i class="swatch" style="background:#fdba74"></i>EigenTrust (2003): 0% a 70%, em arquivo</span>
+      <span><i class="swatch" style="background:#166534"></i>Cenário deste TCC</span>
+      <span><i class="swatch" style="background:#fff;border:3px solid #92400e;height:14px"></i>Ponto de quebra</span>
+    </div>
+    <div class="track" aria-hidden="true">
+      <div class="rail"></div>
+      <div class="band bft"></div>
+      <div class="band eigen"></div>
+      <div class="mark cenario" style="left:0%"><span>0%</span></div>
+      <div class="mark cenario" style="left:25%"><span>25%</span></div>
+      <div class="mark cenario" style="left:50%"><span>50%</span></div>
+      <div class="mark quebra" style="left:65%"><span>65%</span></div>
+      <div class="mark quebra" style="left:80%"><span>80%</span></div>
+    </div>
+    <div class="axis"><span>0%</span><span>um terço</span><span>50%</span><span>70%</span><span>100%</span></div>
+  </div>
+
+  <div class="note">
+    <p style="margin:0">Raza, Badidi e El Harrouss (2026) não desenham uma faixa: injetam seis clientes maliciosos e suspendem quem cai de reputação. Chen (2024), AutoDFL (2025) e ur Rehman et al. (2023) não publicam uma varredura de 50% a 80% que dê para citar. Por isso eles não puxam o cenário para cima da maioria.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Cinco cenários ficam. O resto, não.</h2>
+  <div class="cards">
+    <article class="card entra">
+      <div class="tag">Entra · 0% e 25%</div>
+      <p>Lamport e o PBFT testam acordo com menos de um terço de faltosos. EigenTrust começa em 0% e sobe de 10 em 10. Aqui a acurácia de teste é 1 no fixo e no dinâmico com gabarito.</p>
+    </article>
+    <article class="card entra">
+      <div class="tag">Entra · 50%, todos votam 999</div>
+      <p>Ainda está dentro da faixa do EigenTrust e já passou do BFT clássico. É o primeiro empate da maioria simples. No fixo a acurácia de teste é 0. No dinâmico sem gabarito o 1 vem da anulação de quórum na rodada 1.</p>
+    </article>
+    <article class="card entra">
+      <div class="tag">Entra · líder que forja o registro</div>
+      <p>O PBFT troca o líder faltoso. Aqui o líder malicioso grava peso 1 para o conluio e 0 para os demais. É o ataque já executado no dinâmico.</p>
+    </article>
+    <article class="card entra">
+      <div class="tag">Entra · com gabarito e sem gabarito</div>
+      <p>O EigenTrust usa alguns pares pré-confiáveis para quebrar o coletivo. Aqui a âncora é o gabarito: nas três primeiras rodadas do dinâmico com gabarito, e nas rodadas 10, 20, 30, 40 e 50. Sem gabarito essa âncora não age.</p>
+    </article>
+    <article class="card entra">
+      <div class="tag">Entra · auditor que veta proposta honesta</div>
+      <p>O PBFT confirma por outra réplica, não só pelo líder. Na matriz dinâmica o veto não anula a rodada honesta, e o auditor perde reputação. Cabe numa frase. Não pede código novo.</p>
+    </article>
+    <article class="card quebra">
+      <div class="tag">Ponto de quebra · 65% e 80%</div>
+      <p>Não é o que os trabalhos costumam avaliar. A maioria simples já é 0: 32 contra 18, e 40 contra 10. Sem gabarito, o acerto 1 é a cópia dos honestos, não um livro único da rede.</p>
+    </article>
+    <article class="card fora">
+      <div class="tag">Não entra agora</div>
+      <p>Quarentena, vizinho julgando vizinho, bloquear todo ex-líder, honesto instável no artigo, espalhar os maliciosos no grafo, líder sempre honesto, e malicioso que acerta no começo para subir. A quarentena mais próxima da lista é a de Raza et al.: cortam a reputação e suspendem por algumas rodadas.</p>
+    </article>
+  </div>
+</section>
+
+<section>
+  <h2>O que a reunião perguntou, em uma linha</h2>
+  <div class="cards">
+    <article class="card">
+      <h3>Os honestos se esgotam porque já lideraram?</h3>
+      <p>Não. Só o líder da rodada anterior fica de fora. Na seguinte ele pode liderar de novo. A rede permanece com 50 nós.</p>
+    </article>
+    <article class="card">
+      <h3>Muito conluio vale a pena?</h3>
+      <p>Já foi medido: 0%, 25%, 50%, 65% e 80%.</p>
+    </article>
+    <article class="card">
+      <h3>Nas melhores escolhas, os honestos vencem?</h3>
+      <p>Vencem a resposta da rodada 2 em diante, até 80%. Vencem o score dentro de um livro só em 50%. Em 65% e em 80% o 1 é a cópia dos 18 e dos 10 honestos.</p>
+    </article>
+    <article class="card">
+      <h3>É a auditoria que vira o jogo?</h3>
+      <p>Não. Com gabarito, o empurrão das três primeiras rodadas é o gabarito, com α = 0,8. Sem gabarito, é a recusa do registro forjado mais o quórum.</p>
+    </article>
+    <article class="card">
+      <h3>O honesto é sempre honesto?</h3>
+      <p>Acerta com probabilidade 0,9. O malicioso erra sempre e vota 999.</p>
+    </article>
+  </div>
+</section>
+
+<section id="graficos">
+  <div class="kicker">Gráficos</div>
+  <h2>Acerto do consenso, rodada por rodada</h2>
+  <p>Círculo azul: fixo, com gabarito. Triângulo laranja: dinâmico, com gabarito. Estrela verde: dinâmico, sem gabarito. As verticais T1 a T5 são as rodadas 10, 20, 30, 40 e 50.</p>
+  <figure>
+    <img src="acerto_por_rodada_50_65_80.png" alt="Três painéis: acerto do consenso ponderado com 50%, 65% e 80% de maliciosos.">
+    <figcaption>Média das cinco repetições. 1 é acerto do consenso ponderado; 0 é erro.</figcaption>
+  </figure>
+  <div class="panels">
+    <div class="panel"><b>50% · 25 contra 25.</b> O fixo fica em 0 nas 50 rodadas. No dinâmico, a rodada 1 erra e as seguintes acertam. Há uma cadeia só: o quórum não passa e a rodada forjada é anulada.</div>
+    <div class="panel"><b>65% · 32 contra 18.</b> O fixo continua em 0. O 1 do dinâmico é a cópia dos 18 honestos. Os 32 ficam na outra cópia. A maioria sobre as 50 respostas é 0.</div>
+    <div class="panel"><b>80% · 40 contra 10.</b> O mesmo desenho. O 1 é a cópia dos 10 honestos. Isso ocorre com gabarito e sem gabarito.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Peso do voto no dinâmico</h2>
+  <p>Círculo azul: honestos. Triângulo laranja: maliciosos. O fixo não está nesta figura. Em 50% as duas curvas estão na mesma cadeia. Em 80% cada curva é a média na cópia daquele grupo.</p>
+  <figure>
+    <img src="reputacao_dinamico_50_e_80.png" alt="Quatro painéis: peso médio do voto em 50% e 80%, com e sem gabarito.">
+    <figcaption>As verticais são as rodadas 10, 20, 30, 40 e 50. Com gabarito, são também a validação.</figcaption>
+  </figure>
+  <div class="panels">
+    <div class="panel"><b>(a) 50%, com gabarito.</b> Na primeira rodada o honesto vai a 0,804 e o malicioso a 0,050. Na rodada 50: 0,878 e 0,000.</div>
+    <div class="panel"><b>(b) 50%, sem gabarito.</b> A punição deixa o malicioso em 0,250 e o honesto em 0,500. Na rodada 50: 0,867 e 0,020. O acerto do gráfico anterior já é 1 desde a rodada 2.</div>
+    <div class="panel"><b>(c) 80%, com gabarito.</b> A laranja é a cópia dos 40. O registro forjado grava 1; a validação puxa esse peso a 0,2. Por isso o dente de serra. A azul é a cópia dos 10.</div>
+    <div class="panel"><b>(d) 80%, sem gabarito.</b> Sem validação, o malicioso fica em 1 na cópia dele. O honesto chega a 0,881 na cópia dos 10. As cadeias não se misturam.</div>
+  </div>
+  <div class="note">
+    <p style="margin:0">Uma rodada com gabarito e α = 0,8 deixa cada malicioso com no máximo 0,2. Em 80% isso soma 40 × 0,2 = 8, contra cerca de 6,5 do lado dos 10 honestos. Essa conta não põe o honesto à frente dentro do mesmo livro.</p>
+  </div>
+</section>
+
+<section id="equacao">
+  <div class="kicker">Equação</div>
+  <h2>A reputação é uma média do passado com o sinal desta rodada</h2>
+  <div class="eq">R<sub>i</sub><sup>(t+1)</sup> = (1 − α) R<sub>i</sub><sup>(t)</sup> + α s<sub>i</sub><sup>(t)</sup></div>
+  <p>Todo nó começa em 0,5. Score alto significa “concordou com a regra daquela rodada”. Enquanto o consenso for o dos honestos, o score alto é o do honesto. Se o conluio passa a ser o consenso, a mesma conta sobe o score do conluio.</p>
+  <table>
+    <thead><tr><th>Símbolo</th><th>O que é</th><th>Valor aqui</th></tr></thead>
+    <tbody>
+      <tr><td>R<sub>i</sub><sup>(t)</sup></td><td>Reputação do nó antes da rodada. É o peso do voto dessa rodada.</td><td>Entre 0 e 1</td></tr>
+      <tr><td>α</td><td>Quanto a rodada atual mexe no histórico.</td><td>Fixo: 0,3. Dinâmico: 0,05 no consenso, 0,8 no gabarito, 0,5 na punição.</td></tr>
+      <tr><td>s<sub>i</sub><sup>(t)</sup></td><td>1 se a resposta conta como certa para aquela regra; 0 se erra.</td><td>Consenso nas rodadas normais. Gabarito nas três primeiras do dinâmico com gabarito e nas rodadas 10, 20, 30, 40 e 50.</td></tr>
+      <tr><td>Reputação de eleição</td><td>O outro score. Só elege o líder e fecha o quórum.</td><td>Na rodada normal aceita, não se mexe.</td></tr>
+    </tbody>
+  </table>
+  <p class="small">O consenso ponderado fica com a resposta de maior soma de pesos. A maioria simples conta votos. No empate, os dois ficam com o menor número, e o 999 perde esse desempate.</p>
+</section>
+
+<section>
+  <div class="kicker">Para o artigo</div>
+  <h2>A frase que liga a literatura aos cenários</h2>
+  <div class="quote">
+    <p>O PBFT e Lamport testam acordo com menos de um terço de faltosos; o EigenTrust testa arquivo inautêntico, sozinho ou em coletivo, de 0% a 70%, com alguns pares pré-confiáveis; Raza et al. cortam a reputação e suspendem o cliente malicioso em vez de deixá-lo votar. Optamos por 0%, 25% e 50% de conluio no valor 999, com líder que forja o registro, com e sem gabarito, porque esses são os comportamentos que esses trabalhos avaliam e que o simulador já executa. Medimos também 65% e 80% para localizar o ponto em que a maioria simples deixa de acertar e em que, sem gabarito, o livro único se divide. Não adotamos quarentena nem opinião de vizinho: a primeira não está no protocolo atual, e a segunda mudaria o score global do livro, que é o objeto da comparação com o orquestrador fixo.</p>
+  </div>
+</section>
+
+<section>
+  <h2>De onde saiu cada número da literatura</h2>
+  <p class="small">Lido em resumo, HTML ou PDF aberto. Onde o PDF é pago, a linha diz isso.</p>
+  <details open>
+    <summary>Abrir a tabela</summary>
+    <table>
+      <thead>
+        <tr><th>Trabalho</th><th>Malicioso</th><th>Fração</th><th>Reputação</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lamport et al., 1982</td><td>Mensagem arbitrária</td><td>n ≥ 3f+1, menos de 1/3</td><td>Não há</td></tr>
+        <tr><td>Castro e Liskov, 1999</td><td>Réplica arbitrária; líder faltoso é trocado</td><td>No máximo f, com n ≥ 3f+1</td><td>Troca de líder, sem score</td></tr>
+        <tr><td>Kamvar et al., 2003</td><td>Arquivo inautêntico, sozinho ou em coletivo, com disfarce</td><td>0% a 70%. Tabela-base: 60 bons, 42 maliciosos, 3 pré-confiáveis</td><td>Deixa de escolher quem tem confiança baixa. O par bom erra cerca de 5% dos uploads</td></tr>
+        <tr><td>Raza, Badidi e El Harrouss, 2026</td><td>Envenenamento; cliente que falta rodada</td><td>Clientes 25–30, a partir da rodada 3. Não é varredura até 80%</td><td>Corta a reputação e suspende. Volta se o score passa de 0,6</td></tr>
+        <tr><td>Chen et al., 2024</td><td>Compartilhador malicioso na trajetória</td><td>O HTML aberto não fixa um percentual</td><td>Opinião do vizinho. Não é quarentena</td></tr>
+        <tr><td>ur Rehman et al., 2023</td><td>Participação maliciosa</td><td>O resumo fala em ataque abaixo de 5%. A fração injetada não foi lida: PDF pago</td><td>Crédito, não suspensão</td></tr>
+        <tr><td>AutoDFL, 2025</td><td>Sybil, carona, conluio, identidade nova</td><td>Premissa f &lt; n/3. Sem varredura de 50% a 80%</td><td>Identidade nova zera o histórico</td></tr>
+        <tr><td>Bouhata et al., 2025; Wei e Liu, 2025</td><td>Revisão de ataque no treino</td><td>Não é um experimento com uma fração</td><td>Não é mecanismo deste trabalho</td></tr>
+      </tbody>
+    </table>
+  </details>
+</section>
+
+</main>
+</body>
+</html>

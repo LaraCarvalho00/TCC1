@@ -46,11 +46,19 @@ class ModelBackend:
 
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        if device:
+            self.device = device
+        elif torch.cuda.is_available():
+            self.device = "cuda"
+        elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
+        dtype = torch.float16 if self.device in ("cuda", "mps") else torch.float32
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            torch_dtype="auto",
+            torch_dtype=dtype,
         ).to(self.device)
 
     def solve(self, question: str) -> Optional[Answer]:
@@ -75,9 +83,18 @@ def _build_prompt(tokenizer, question: str) -> str:
     content = _PROMPT_TEMPLATE.format(question=question)
     chat_template = getattr(tokenizer, "chat_template", None)
     if chat_template:
-        return tokenizer.apply_chat_template(
-            [{"role": "user", "content": content}],
-            tokenize=False,
-            add_generation_prompt=True,
-        )
+        messages = [{"role": "user", "content": content}]
+        try:
+            return tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=False,
+            )
+        except TypeError:
+            return tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
     return content

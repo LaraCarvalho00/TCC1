@@ -78,7 +78,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
     profiles = build_profiles(args.nodes, args.malicious, args.unstable)
     node_ids = list(profiles)
 
-    tasks = dataset.load_sample()
+    tasks = getattr(args, "tasks", None) or dataset.load_sample()
     if not tasks:
         raise RuntimeError("Amostra de dataset vazia.")
 
@@ -147,9 +147,13 @@ def run_simulation(args: argparse.Namespace) -> dict:
             expected = normalize(task["answer"])
             this_is_test = is_test_round(round_index, test_every)
 
+            model_answers = getattr(args, "model_answers", None)
             responses: list[NodeResponse] = []
             for node_id in node_ids:
-                answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
+                if model_answers is not None and profiles[node_id] == behavior.HONEST:
+                    answer, latency = model_answers.get(task["id"]), 0
+                else:
+                    answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
                 responses.append(
                     NodeResponse(
                         node_id=node_id,
