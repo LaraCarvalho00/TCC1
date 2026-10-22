@@ -533,7 +533,9 @@ def dynamic_summary(
     (onde está a maioria dos nós não maliciosos); divisões e réplicas
     divergentes olham a rede inteira.
     """
-    ref = [r for r in leadership_rows if int(r["is_reference"]) == 1]
+    ref_all = [r for r in leadership_rows if int(r["is_reference"]) == 1]
+    # Rodadas de calibração sem líder não entram nas contagens de liderança.
+    ref = [r for r in ref_all if r["outcome"] != "calibration"]
     leaders = [r["leader"] for r in ref]
 
     by_profile: dict[str, int] = {}
@@ -554,7 +556,7 @@ def dynamic_summary(
     voided = [r for r in ref if r["outcome"] == "voided"]
     honest_heads = {heads[n] for n, p in profiles.items() if p != "malicious" and n in heads}
     hops = [int(r["hops"]) for r in leadership_rows]
-    oracle_rows = [r for r in ref if r["oracle"]]
+    oracle_rows = [r for r in ref_all if r["oracle"]]
 
     return {
         "dynamic": {
@@ -577,6 +579,7 @@ def dynamic_summary(
             "replicas_divergent_final": max(0, len(set(heads.values())) - 1),
             "honest_replicas_divergent_final": max(0, len(honest_heads) - 1),
             "oracle_rounds": len(oracle_rows),
+            "leaderless_calibration_rounds": sum(1 for r in ref_all if r["outcome"] == "calibration"),
             "oracle_blocked_rounds": sum(1 for r in oracle_rows if r["oracle"] == "blocked"),
             "oracle_rejections_total": sum(int(r["oracle_rejecters"] or 0) for r in ref),
             "malicious_power_mass_by_round": [round(float(r["malicious_power_mass"]), 4) for r in ref],

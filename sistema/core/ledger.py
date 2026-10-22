@@ -17,6 +17,10 @@ Tipos de registro (``kind``):
                 vetou uma proposta válida).
 * ``oracle``  : correção pelo gabarito, emitida pelo juiz do experimento nas
                 rodadas de calibração e de teste.
+* ``calibration`` : rodada de calibração sem líder (opção
+                ``leaderless_calibration``). Não há eleição, proposta nem voto:
+                o registro guarda as respostas e o gabarito, e a reputação é
+                atualizada pelo gabarito sem passar pelo quórum.
 """
 from __future__ import annotations
 
@@ -26,7 +30,7 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Callable, Optional
 
 GENESIS_HASH = "0" * 64
-KINDS = ("round", "void", "penalty", "oracle")
+KINDS = ("round", "void", "penalty", "oracle", "calibration")
 
 
 @dataclass(frozen=True)

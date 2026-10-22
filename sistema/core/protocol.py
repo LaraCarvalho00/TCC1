@@ -141,6 +141,15 @@ class NetworkState:
         return sum(max(0.0, self.power.get(n)) for n in nodes)
 
 
+def leaderless_calibration_round(round_index: int, config: ProtocolConfig) -> bool:
+    """Rodada de calibração sem líder (só com gabarito e a opção ligada)."""
+    return (
+        config.signal != "consensus"
+        and config.defense.leaderless_calibration
+        and round_index < config.defense.calibration_rounds
+    )
+
+
 def oracle_round(round_index: int, config: ProtocolConfig) -> bool:
     """Indica se o juiz do experimento corrige esta rodada pelo gabarito."""
     if config.signal == "consensus":
@@ -423,6 +432,33 @@ def oracle_record(
     ).sealed()
 
 
+def calibration_record(
+    *,
+    prev_hash: str,
+    round_index: int,
+    task_id: str,
+    expected: Optional[Answer],
+    responses: dict[str, Optional[Answer]],
+    consensus: Optional[Answer],
+) -> RoundRecord:
+    """Registro de uma rodada de calibração sem líder.
+
+    ``consensus`` é só informativo (o consenso ponderado calculado com a
+    reputação de antes da rodada); a reputação é atualizada pelo gabarito.
+    """
+    pairs = tuple(tuple(p) for p in _pairs(responses))
+    return RoundRecord(
+        kind="calibration",
+        round_index=round_index,
+        prev_hash=prev_hash,
+        task_id=task_id,
+        responses=pairs,
+        consensus=normalize(consensus),
+        expected=normalize(expected),
+        graded=pairs,
+    ).sealed()
+
+
 # ---------------------------------------------------------------------------
 # Aplicação de registros
 # ---------------------------------------------------------------------------
@@ -453,7 +489,13 @@ def apply_record(state: NetworkState, record: RoundRecord) -> None:
     elif record.kind == "penalty":
         for nid, _ in record.penalties:
             _punish(state, nid)
-    elif record.kind == "oracle":
+    elif record.kind in ("oracle", "calibration"):
+        if record.kind == "calibration":
+            listed = record.responses_map()
+            for nid in state.node_ids:
+                history = state.presence.setdefault(nid, [])
+                history.append(listed.get(nid) is not None)
+                del history[:-max(1, state.config.availability_window)]
         alpha = state.config.oracle_alpha
         for nid, answer in record.graded:
             correct = answer is not None and normalize(answer) == normalize(record.expected)

@@ -77,6 +77,38 @@ class ModelBackend:
         text = self.tokenizer.decode(generated, skip_special_tokens=True)
         return extract_final_answer(text)
 
+    def sample(
+        self,
+        question: str,
+        *,
+        temperature: float = 0.7,
+        top_p: float = 0.95,
+        seed: Optional[int] = None,
+    ) -> tuple[Optional[Answer], str]:
+        """Uma geração com amostragem. Retorna ``(resposta extraída, texto)``.
+
+        Com ``seed`` fixa, a mesma pergunta gera a mesma amostra, o que torna
+        o banco de respostas reproduzível.
+        """
+        import torch
+
+        if seed is not None:
+            torch.manual_seed(seed)
+        prompt = _build_prompt(self.tokenizer, question)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        with torch.no_grad():
+            output = self.model.generate(
+                **inputs,
+                max_new_tokens=self.max_new_tokens,
+                do_sample=True,
+                temperature=temperature,
+                top_p=top_p,
+                pad_token_id=self.tokenizer.eos_token_id,
+            )
+        generated = output[0][inputs["input_ids"].shape[1]:]
+        text = self.tokenizer.decode(generated, skip_special_tokens=True)
+        return extract_final_answer(text), text
+
 
 def _build_prompt(tokenizer, question: str) -> str:
     """Usa o chat template do tokenizer quando disponível."""

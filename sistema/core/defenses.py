@@ -32,6 +32,10 @@ class DefenseConfig:
     oracle_alpha: float = 0.8
     split_scores: bool = False
     refuse_forged: bool = False
+    # Calibração sem líder: nas ``calibration_rounds`` primeiras rodadas não há
+    # eleição, proposta nem voto; o gabarito é gravado e aplicado sem quórum.
+    # Fica fora de MEASURES para não alterar os presets da ablação.
+    leaderless_calibration: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)

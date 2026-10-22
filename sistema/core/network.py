@@ -29,7 +29,9 @@ from .protocol import (
     ProtocolConfig,
     Vote,
     apply_record,
+    calibration_record,
     decide,
+    leaderless_calibration_round,
     objective_check,
     oracle_record,
     oracle_round,
@@ -123,6 +125,11 @@ class SimulatedNetwork:
         reference_gid = self.reference_group().gid
         outcomes: list[GroupRound] = []
         forks: list[Group] = []
+        if leaderless_calibration_round(round_index, self.config):
+            return [
+                self._calibration_in_group(group, round_index, task_id, expected, answers, group.gid == reference_gid)
+                for group in self.groups
+            ]
         for group in list(self.groups):
             outcome, fork = self._round_in_group(group, round_index, task_id, answers, group.gid == reference_gid)
             if oracle_round(round_index, self.config):
@@ -228,6 +235,67 @@ class SimulatedNetwork:
         )
         return outcome, fork
 
+    def _calibration_in_group(
+        self,
+        group: Group,
+        round_index: int,
+        task_id: str,
+        expected: Optional[Answer],
+        answers: dict[str, Optional[Answer]],
+        is_reference: bool,
+    ) -> GroupRound:
+        """Rodada de calibração sem líder.
+
+        A tarefa se espalha pelo grafo a partir do primeiro membro do grupo,
+        cada nó responde e o registro grava as respostas e o gabarito. Não há
+        eleição, proposta, voto nem quórum, então não há forja a aprovar. O
+        consenso ponderado da rodada é calculado com a reputação de antes,
+        só para a medida de acurácia; a reputação muda pelo gabarito.
+        """
+        state = group.state
+        members = list(group.members)
+        colluders = {m for m in members if self.malicious(m)}
+        mass = state.power_mass(members)
+        malicious_mass = state.power_mass(colluders) / mass if mass > 0 else 0.0
+
+        dist = distances(self.graph, members[0])
+        reached = [m for m in members if m in dist]
+        hops = max((dist[m] for m in reached), default=0)
+        responses = {m: answers.get(m) for m in reached}
+        cons = weighted_consensus(list(responses.items()), state.consensus.weights())
+
+        record = calibration_record(
+            prev_hash=group.ledger.head,
+            round_index=round_index,
+            task_id=task_id,
+            expected=expected,
+            responses=responses,
+            consensus=cons.answer,
+        )
+        group.ledger.append(record)
+        apply_record(state, record)
+
+        return GroupRound(
+            gid=group.gid,
+            is_reference=is_reference,
+            members=members,
+            leader=None,
+            auditor=None,
+            bootstrap=False,
+            attack=None,
+            record=record,
+            decision=None,
+            votes={},
+            hops=hops,
+            refusers=[],
+            fork_gid=None,
+            malicious_power_mass=malicious_mass,
+            margin=cons.margin,
+            is_tie=cons.is_tie,
+            oracle="calibration",
+            committed={m: cons.answer for m in members},
+        )
+
     def _oracle(
         self,
         group: Group,
@@ -280,7 +348,10 @@ def leadership_row(
         "auditor_profile": profiles.get(outcome.auditor or "", ""),
         "bootstrap": int(outcome.bootstrap),
         "attack": outcome.attack or "",
-        "outcome": "accepted" if decision and decision.accepted else "voided",
+        "outcome": (
+            "calibration" if outcome.oracle == "calibration"
+            else "accepted" if decision and decision.accepted else "voided"
+        ),
         "objective_reason": decision.objective_reason if decision else "",
         "reason": decision.reason if decision else "",
         "censored_complaints": decision.censored_complaints if decision else 0,

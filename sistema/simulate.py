@@ -148,9 +148,14 @@ def run_simulation(args: argparse.Namespace) -> dict:
             this_is_test = is_test_round(round_index, test_every)
 
             model_answers = getattr(args, "model_answers", None)
+            answer_bank = getattr(args, "answer_bank", None)
             responses: list[NodeResponse] = []
             for node_id in node_ids:
-                if model_answers is not None and profiles[node_id] == behavior.HONEST:
+                if answer_bank is not None and profiles[node_id] == behavior.HONEST:
+                    # Cada nó honesto sorteia uma das respostas que o modelo gerou
+                    # para esta pergunta (banco gerado com amostragem).
+                    answer, latency = rng.choice(answer_bank[task["id"]]), 0
+                elif model_answers is not None and profiles[node_id] == behavior.HONEST:
                     answer, latency = model_answers.get(task["id"]), 0
                 else:
                     answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
@@ -252,7 +257,7 @@ def defense_from_args(args: argparse.Namespace) -> DefenseConfig:
         overrides["consensus_alpha"] = args.consensus_alpha
     if getattr(args, "oracle_alpha", None) is not None:
         overrides["oracle_alpha"] = args.oracle_alpha
-    for flag in ("split_alpha", "oracle_bypasses_quorum", "split_scores", "refuse_forged"):
+    for flag in ("split_alpha", "oracle_bypasses_quorum", "split_scores", "refuse_forged", "leaderless_calibration"):
         if getattr(args, flag, False):
             overrides[flag] = True
     return dataclasses.replace(config, **overrides) if overrides else config
@@ -412,6 +417,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--oracle-bypasses-quorum", action="store_true", dest="oracle_bypasses_quorum")
     parser.add_argument("--split-scores", action="store_true", dest="split_scores")
     parser.add_argument("--refuse-forged", action="store_true", dest="refuse_forged")
+    parser.add_argument(
+        "--leaderless-calibration", action="store_true", dest="leaderless_calibration",
+        help="Rodadas de calibração sem eleição, proposta nem voto; gabarito aplicado sem quórum.",
+    )
     return parser.parse_args(argv)
 
 
