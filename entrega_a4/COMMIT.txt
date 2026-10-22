@@ -2,3 +2,4 @@ branch: a4-dados
 commit_dos_dados: 0713bad7e2ccd0e54ebd950390b4d40fcab13f0d
 base: 44190e7288cedc7d0d05313c3da555412763bc37
 remoto: https://github.com/LaraCarvalho00/TCC1.git
+push: aceito, branch a4-dados

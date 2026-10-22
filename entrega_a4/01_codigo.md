@@ -117,4 +117,4 @@ O texto que descreve três rodadas sem líder está em `orientacao-literatura-eq
 
 Commit dos dados e do código local: `0713bad7e2ccd0e54ebd950390b4d40fcab13f0d` (curto: `0713bad`), branch `a4-dados`. Mensagem: «Publica os dados da correção A4 junto com o código local ainda não commitado.»
 
-Esse commit parte de `44190e7`. O commit seguinte nesta branch só grava este hash em `COMMIT.txt`, `01_codigo.md` e `RESUMO.md`. O resultado do push está no `RESUMO.md`.
+Esse commit parte de `44190e7`. O commit seguinte nesta branch só grava este hash em `COMMIT.txt`, `01_codigo.md` e `RESUMO.md`. O push da branch `a4-dados` para `https://github.com/LaraCarvalho00/TCC1.git` foi aceito.
