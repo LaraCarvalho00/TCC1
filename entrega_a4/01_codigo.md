@@ -115,4 +115,6 @@ O texto que descreve três rodadas sem líder está em `orientacao-literatura-eq
 
 ## 4. Branch `a4-dados`
 
-O commit e o push são feitos ao final, depois que `entrega_a4/` está completa. O hash fica em `entrega_a4/COMMIT.txt` e no `RESUMO.md`. Se o push para `LaraCarvalho00/TCC1` for recusado, o commit permanece só na máquina.
+Commit dos dados e do código local: `0713bad7e2ccd0e54ebd950390b4d40fcab13f0d` (curto: `0713bad`), branch `a4-dados`. Mensagem: «Publica os dados da correção A4 junto com o código local ainda não commitado.»
+
+Esse commit parte de `44190e7`. O commit seguinte nesta branch só grava este hash em `COMMIT.txt`, `01_codigo.md` e `RESUMO.md`. O resultado do push está no `RESUMO.md`.

@@ -2,7 +2,7 @@
 
 Números gerados em 22/10/2026 a partir de `main` em `44190e7288cedc7d0d05313c3da555412763bc37`, com as alterações locais de `sistema/simulate.py` e `sistema/node/inference.py`. Essas duas alterações não entram nas simulações das etapas 2 a 4: o runner não passa `tasks` nem `model_answers`. A etapa 5 usa o `inference.py` da árvore de trabalho (MPS e `enable_thinking=False`).
 
-O hash do commit que publica esta pasta fica em `COMMIT.txt`.
+Commit dos dados: `0713bad7e2ccd0e54ebd950390b4d40fcab13f0d`, branch `a4-dados`. O mesmo hash está em `COMMIT.txt`.
 
 Nós maliciosos que o código usou, `round(fração × 50)` em `sistema/simulate.py:58`:
 
