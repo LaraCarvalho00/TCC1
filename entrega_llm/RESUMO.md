@@ -2,7 +2,7 @@
 
 Branch `a4-calibracao-llm`, criada a partir de `a4-dados` (`e5e406b`). Autor dos commits deste repositório: Lara Andrade Carvalho (laraandrade312@gmail.com).
 
-O hash do commit dos resultados fica registrado abaixo, no commit seguinte a este arquivo.
+Commit dos resultados: `01c7d36496709e53b02fe124aa64089ef3ac3bad`.
 
 ## Etapa 1 — patch e testes
 
