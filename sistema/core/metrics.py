@@ -98,6 +98,9 @@ ROUND_FIELDS = [
     "is_tie_majority",
     "is_test",               # 1 se esta rodada é um teste
     "test_round",            # número 1-based da rodada, vazio quando não é teste
+    "pct_honest_exact",      # honestos com resposta igual ao gabarito / honestos
+    "pct_honest_responded",  # honestos que responderam / honestos
+    "audited",               # 1 se a rodada teve gabarito
 ]
 
 HISTORY_FIELDS = [
@@ -310,6 +313,7 @@ class MetricsLogger:
         is_tie_weighted: bool,
         is_tie_majority: bool,
         is_test: bool = False,
+        audited: bool = False,
     ) -> None:
         latencies = [r.latency_ms for r in result.responses if r.answer is not None]
         mean_latency = round(statistics.mean(latencies), 1) if latencies else 0.0
@@ -343,6 +347,8 @@ class MetricsLogger:
             "is_tie_majority": int(is_tie_majority),
             "is_test": int(is_test),
             "test_round": (result.round_index + 1) if is_test else "",
+            **_honest_fractions(result),
+            "audited": int(audited),
         }
         self.round_rows.append(row)
         self._round_stream.write(row)
@@ -403,6 +409,7 @@ class MetricsLogger:
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
             "mean_reputation_by_profile_across_rounds": mean_rep_across_rounds,
             "recovery_round": recovery_round([int(r["consensus_correct"]) for r in self.round_rows]),
+            "mean_pct_honest_exact": _mean_honest_exact(self.round_rows),
         }
         return result
 
@@ -574,6 +581,10 @@ def dynamic_summary(
             "censored_accepted": sum(1 for r in accepted if int(r["censored_complaints"]) > 0),
             "mandates_ended_by_audit": sum(1 for r in voided if str(r["auditor_vote"]) == "0"),
             "auditor_false_reject_penalties": sum(1 for r in ref if ":false_reject" in str(r["penalties"])),
+            "auditor_malicious_rounds": sum(1 for r in ref if r["auditor_profile"] == "malicious"),
+            "auditor_malicious_vetoes": sum(
+                1 for r in ref if r["auditor_profile"] == "malicious" and str(r["auditor_vote"]) == "0"
+            ),
             "chain_split_rounds": sum(1 for r in leadership_rows if r["refused_nodes"]),
             "n_chains_final": len(set(heads.values())),
             "replicas_divergent_final": max(0, len(set(heads.values())) - 1),
@@ -593,6 +604,27 @@ def dynamic_summary(
 
 def _generate_id() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def _honest_fractions(result) -> dict:
+    """Frações sobre todos os nós de perfil honesto, tenham respondido ou não."""
+    honest = [response for response in result.responses if response.profile == "honest"]
+    if not honest:
+        return {"pct_honest_exact": "", "pct_honest_responded": ""}
+    exact = sum(
+        1 for response in honest
+        if response.answer is not None and response.answer == result.expected
+    )
+    responded = sum(1 for response in honest if response.answer is not None)
+    return {
+        "pct_honest_exact": round(exact / len(honest), 6),
+        "pct_honest_responded": round(responded / len(honest), 6),
+    }
+
+
+def _mean_honest_exact(rows: list[dict]):
+    values = [float(row["pct_honest_exact"]) for row in rows if row.get("pct_honest_exact") != ""]
+    return round(statistics.mean(values), 6) if values else None
 
 
 def _ratio(part: int, total: int) -> float:

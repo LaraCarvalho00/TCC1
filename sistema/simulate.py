@@ -257,6 +257,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 signal=round_signal,
                 alpha=round_alpha,
                 consensus_mode=protocol.consensus_mode,
+                audited=oracle_round(round_index, protocol),
             )
     except BaseException:
         logger.close()
@@ -372,6 +373,7 @@ def _dynamic_round(
         initial=initial,
         is_test=is_test,
         consensus_mode=network.config.consensus_mode,
+        audited=oracle_round(round_index, network.config),
     )
 
 

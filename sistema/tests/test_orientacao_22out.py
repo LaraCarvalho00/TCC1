@@ -163,3 +163,32 @@ class AuditAndSlowUpTest(unittest.TestCase):
         fallen = ReputationTracker(["n"], mechanism="ema_slow_up", initial=0.5)
         fallen.update("n", 0.0, ground_truth=True)
         self.assertAlmostEqual(fallen.get("n"), 0.1)
+
+
+class RequestedMeasuresTest(unittest.TestCase):
+    def test_honest_fraction_and_audit_column(self):
+        args = _args(
+            nodes=10, malicious=0.0, rounds=1, orchestration="fixed", signal="truth",
+            honest_accuracy=1.0, seed=1,
+        )
+        summary = run_simulation(args)
+        self.assertAlmostEqual(summary["mean_pct_honest_exact"], 1.0)
+        with open(os.path.join(args.output, "rounds.csv"), newline="") as handle:
+            row = next(csv.DictReader(handle))
+        self.assertEqual(float(row["pct_honest_exact"]), 1.0)
+        self.assertEqual(float(row["pct_honest_responded"]), 1.0)
+        self.assertEqual(row["audited"], "1")
+
+    def test_dynamic_summary_counts_malicious_auditors(self):
+        args = _args(
+            nodes=10, malicious=0.5, rounds=6, seed=1, orchestration="dynamic",
+            auditor_attack="false_reject", defense="none",
+        )
+        summary = run_simulation(args)
+        with open(os.path.join(args.output, "leadership.csv"), newline="") as handle:
+            ref = [row for row in csv.DictReader(handle) if row["is_reference"] == "1" and row["outcome"] != "calibration"]
+        malicious = sum(1 for row in ref if row["auditor_profile"] == "malicious")
+        vetoes = sum(1 for row in ref if row["auditor_profile"] == "malicious" and row["auditor_vote"] == "0")
+        self.assertEqual(summary["dynamic"]["auditor_malicious_rounds"], malicious)
+        self.assertEqual(summary["dynamic"]["auditor_malicious_vetoes"], vetoes)
+        self.assertGreater(malicious, 0)
