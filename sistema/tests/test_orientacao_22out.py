@@ -81,3 +81,33 @@ class NoiseAnswerTest(unittest.TestCase):
         rows = self._answers(None)
         first = [row["answer"] for row in rows if row["round_index"] == "0"]
         self.assertGreater(len(set(first)), 1)
+
+
+class UnstableAttributeTest(unittest.TestCase):
+    def test_twenty_percent_marks_ten_nodes(self):
+        summary = run_simulation(_args(
+            nodes=50, malicious=0.0, unstable=0.2, unstable_mode="attribute",
+            rounds=1, orchestration="fixed", signal="truth", seed=3,
+        ))
+        self.assertEqual(summary["unstable_honest"] + summary["unstable_malicious"], 10)
+        self.assertEqual(summary["unstable_malicious"], 0)
+
+    def test_high_malicious_fraction_is_accepted(self):
+        summary = run_simulation(_args(
+            nodes=50, malicious=0.8, unstable=0.2, unstable_mode="attribute",
+            rounds=1, orchestration="fixed", signal="truth", seed=3,
+        ))
+        self.assertEqual(summary["unstable_honest"] + summary["unstable_malicious"], 10)
+
+    def test_honest_unstable_answers_honestly(self):
+        args = _args(
+            nodes=50, malicious=0.0, unstable=0.2, unstable_mode="attribute",
+            rounds=1, orchestration="fixed", signal="truth", seed=3,
+            honest_accuracy=1.0, unstable_p_drop=0.0,
+        )
+        run_simulation(args)
+        with open(os.path.join(args.output, "rounds.csv"), newline="") as handle:
+            expected = next(csv.DictReader(handle))["expected"]
+        with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
+            answers = {row["answer"] for row in csv.DictReader(handle)}
+        self.assertEqual(answers, {expected})

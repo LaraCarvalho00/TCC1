@@ -76,8 +76,18 @@ def run_simulation(args: argparse.Namespace) -> dict:
     """Executa a simulação e retorna o resumo gerado pelo MetricsLogger."""
     rng = random.Random(args.seed)
     noise_rng = random.Random(f"{args.seed}:noise")
-    profiles = build_profiles(args.nodes, args.malicious, args.unstable)
+    unstable_mode = getattr(args, "unstable_mode", "profile")
+    if unstable_mode == "attribute":
+        profiles = build_profiles(args.nodes, args.malicious, 0.0)
+    else:
+        profiles = build_profiles(args.nodes, args.malicious, args.unstable)
     node_ids = list(profiles)
+    unstable_rng = random.Random(f"{args.seed}:unstable")
+    if unstable_mode == "attribute":
+        marked = round(float(args.unstable) * len(node_ids))
+        unstable_nodes = set(unstable_rng.sample(node_ids, marked)) if marked else set()
+    else:
+        unstable_nodes = set()
 
     tasks = getattr(args, "tasks", None) or dataset.load_sample()
     if not tasks:
@@ -158,7 +168,9 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 shared_noise = behavior.corrupt_with_noise(base, noise_rng)
             responses: list[NodeResponse] = []
             for node_id in node_ids:
-                if use_noise and profiles[node_id] == behavior.MALICIOUS:
+                if node_id in unstable_nodes and unstable_rng.random() < bcfg.unstable_p_drop:
+                    answer, latency = None, 0
+                elif use_noise and profiles[node_id] == behavior.MALICIOUS:
                     # Consome o gerador principal como o perfil fixo faria, para
                     # os honestos seguintes verem a mesma sequência.
                     _discarded, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
@@ -175,6 +187,8 @@ def run_simulation(args: argparse.Namespace) -> dict:
                     answer, latency = model_answers.get(task["id"]), 0
                 else:
                     answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
+                if node_id in unstable_nodes:
+                    latency = unstable_rng.randint(*bcfg.unstable_latency_ms)
                 responses.append(
                     NodeResponse(
                         node_id=node_id,
@@ -256,6 +270,12 @@ def run_simulation(args: argparse.Namespace) -> dict:
             graph_info={"graph_max_degree": max_degree(network.graph), "graph_diameter": diameter(network.graph)},
         )
         final_reputations = {n: network.group_of(n).state.consensus.get(n) for n in node_ids}
+    if unstable_mode == "attribute":
+        extra = {
+            **(extra or {}),
+            "unstable_honest": sum(profiles[n] == behavior.HONEST for n in unstable_nodes),
+            "unstable_malicious": sum(profiles[n] == behavior.MALICIOUS for n in unstable_nodes),
+        }
     summary = logger.flush(
         run_config, tracker, profiles, seed=args.seed, extra=extra, final_reputations=final_reputations,
     )
@@ -356,6 +376,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--nodes", type=int, default=4, help="Número de nós.")
     parser.add_argument("--malicious", type=float, default=0.25, help="Fração de nós maliciosos.")
     parser.add_argument("--unstable", type=float, default=0.0, help="Fração de nós instáveis.")
+    parser.add_argument(
+        "--unstable-mode", choices=("profile", "attribute"), default="profile", dest="unstable_mode",
+        help="profile = perfil próprio, como hoje; attribute = marca sobre o perfil.",
+    )
     parser.add_argument("--rounds", type=int, default=10, help="Número de rodadas.")
     parser.add_argument(
         "--test-every", type=int, default=DEFAULT_TEST_EVERY, dest="test_every",
