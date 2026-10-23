@@ -1,0 +1,25 @@
+config,fracao,semente,com_reputacao_teste,sem_reputacao_teste,com_reputacao_todas,n_audited,audited_rounds,mean_pct_honest_exact,auditor_malicioso,vetos_auditor_malicioso
+sem_genese,0.0,0,1.0,1.0,0.86,,,0.7432,0,0
+sem_genese,0.0,1,1.0,1.0,0.84,,,0.7372,0,0
+sem_genese,0.5,0,0.8,0.4,0.84,,,0.7568,6,0
+sem_genese,0.5,1,0.8,0.2,0.82,,,0.7376,6,0
+sem_genese,0.8,0,1.0,0.0,0.84,,,0.756,6,0
+sem_genese,0.8,1,1.0,0.0,0.86,,,0.726,6,0
+com_genese,0.0,0,1.0,1.0,0.86,,,0.7432,0,0
+com_genese,0.0,1,1.0,1.0,0.84,,,0.7372,0,0
+com_genese,0.5,0,0.8,0.4,0.84,,,0.7568,3,0
+com_genese,0.5,1,0.8,0.2,0.82,,,0.7376,3,0
+com_genese,0.8,0,1.0,0.0,0.84,,,0.756,3,0
+com_genese,0.8,1,1.0,0.0,0.86,,,0.726,3,0
+auditoria_sorteada_p10,0.0,0,1.0,1.0,0.86,2,7 23,0.7432,0,0
+auditoria_sorteada_p10,0.0,1,1.0,1.0,0.84,8,1 7 17 27 30 35 40 42,0.7372,0,0
+auditoria_sorteada_p10,0.5,0,0.8,0.4,0.84,2,7 23,0.7568,6,0
+auditoria_sorteada_p10,0.5,1,0.8,0.2,0.82,8,1 7 17 27 30 35 40 42,0.7376,6,0
+auditoria_sorteada_p10,0.8,0,1.0,0.0,0.84,2,7 23,0.756,6,0
+auditoria_sorteada_p10,0.8,1,1.0,0.0,0.86,8,1 7 17 27 30 35 40 42,0.726,6,0
+auditoria_sorteada_p20,0.0,0,1.0,1.0,0.86,11,5 7 8 13 18 22 23 34 38 41 43,0.7432,0,0
+auditoria_sorteada_p20,0.0,1,1.0,1.0,0.84,10,1 7 13 14 17 27 30 35 40 42,0.7372,0,0
+auditoria_sorteada_p20,0.5,0,0.8,0.4,0.84,11,5 7 8 13 18 22 23 34 38 41 43,0.7568,6,0
+auditoria_sorteada_p20,0.5,1,0.8,0.2,0.82,10,1 7 13 14 17 27 30 35 40 42,0.7376,6,0
+auditoria_sorteada_p20,0.8,0,1.0,0.0,0.84,11,5 7 8 13 18 22 23 34 38 41 43,0.756,6,0
+auditoria_sorteada_p20,0.8,1,1.0,0.0,0.86,10,1 7 13 14 17 27 30 35 40 42,0.726,6,0
