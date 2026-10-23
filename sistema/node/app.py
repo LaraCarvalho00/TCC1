@@ -40,7 +40,7 @@ from pydantic import BaseModel
 
 from ..core import behavior
 from ..core.answer import Answer, normalize
-from ..core.consensus import weighted_consensus
+from ..core.distance import choose_weighted
 from ..core.defenses import preset as defense_preset
 from ..core.ledger import RoundRecord
 from ..core.protocol import ProtocolConfig, Vote
@@ -379,7 +379,9 @@ async def lead(message: TaskMessage) -> dict:
         responses={n: normalize(a) for n, a in spread["responses"].items()},
         attack=attack, colluders=COLLUDERS,
     )
-    cons = weighted_consensus(list(record.responses), replica.state.consensus.weights())
+    cons = choose_weighted(
+        list(record.responses), replica.state.consensus.weights(), replica.state.config.consensus_mode,
+    )
 
     proposal = RecordMessage(round_index=message.round_index, head=head, record=record.to_json())
     votes = (await verify(proposal))["votes"]

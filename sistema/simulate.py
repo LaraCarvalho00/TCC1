@@ -34,7 +34,7 @@ from .core.defenses import DefenseConfig, preset, preset_names
 from .core.engine import process_round
 from .core.metrics import MetricsLogger, dynamic_summary
 from .core.network import SimulatedNetwork, log_round
-from .core.protocol import SIGNALS, ProtocolConfig, oracle_round
+from .core.protocol import CONSENSUS_MODES, SIGNALS, ProtocolConfig, oracle_round
 from .core.reputation import MECHANISMS, ReputationTracker
 from .core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from .core.schemas import NodeResponse
@@ -128,6 +128,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
         initial=initial,
         test_every=test_every,
         defense=defense,
+        consensus_mode=getattr(args, "consensus_mode", "exact"),
     )
     network = None
     if orchestration == "dynamic":
@@ -192,6 +193,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 is_test=this_is_test,
                 signal=round_signal,
                 alpha=round_alpha,
+                consensus_mode=protocol.consensus_mode,
             )
     except BaseException:
         logger.close()
@@ -294,6 +296,7 @@ def _dynamic_round(
         mechanism=mechanism,
         initial=initial,
         is_test=is_test,
+        consensus_mode=network.config.consensus_mode,
     )
 
 
@@ -395,6 +398,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--signal", choices=SIGNALS, default="truth",
         help="Sinal da reputação: truth (gabarito), consensus ou hybrid.",
+    )
+    parser.add_argument(
+        "--consensus-mode", choices=CONSENSUS_MODES, default="exact", dest="consensus_mode",
+        help="exact = igualdade de hoje; distance = medoide e sinal contínuo.",
     )
     parser.add_argument("--topology", choices=KINDS, default="star", help="Grafo entre os nós.")
     parser.add_argument("--degree", type=int, default=4, help="Vizinhos por nó no grafo kregular.")

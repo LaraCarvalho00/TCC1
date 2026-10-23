@@ -27,7 +27,7 @@ import statistics
 from typing import Optional
 
 from .answer import Answer, normalize
-from .consensus import majority_consensus, weighted_consensus
+from .distance import choose_baseline, choose_weighted, relative_distance
 from .metrics import MetricsLogger
 from .reputation import ReputationTracker
 from .schemas import NodeResponse, RoundResult
@@ -44,6 +44,7 @@ def process_round(
     is_test: bool = False,
     signal: str = "truth",
     alpha: Optional[float] = None,
+    consensus_mode: str = "exact",
 ) -> RoundResult:
     """Processa uma rodada completa após a coleta de respostas.
 
@@ -88,10 +89,10 @@ def process_round(
     # 1. Snapshot dos pesos ANTES da atualização desta rodada.
     weights_before = tracker.weights()
 
-    # 2. Consenso.
+    # 2. Consenso. ``exact`` mantém o voto ponderado e a maioria simples.
     pairs = [(r.node_id, r.answer) for r in responses]
-    cons_w = weighted_consensus(pairs, weights_before)
-    cons_m = majority_consensus(pairs)
+    cons_w = choose_weighted(pairs, weights_before, consensus_mode)
+    cons_m = choose_baseline(pairs, consensus_mode)
 
     # 3. RoundResult.
     result = RoundResult(
@@ -109,12 +110,19 @@ def process_round(
     # 5. Atualização de reputação + log por nó.
     for response in responses:
         correct = response.answer is not None and response.answer == expected
-        if signal == "consensus":
-            signal_ok = response.answer is not None and response.answer == cons_w.answer
-        else:
-            signal_ok = correct
         weight_used = weights_before.get(response.node_id, tracker.initial)
-        rep_update = tracker.update(response.node_id, signal_ok, alpha=alpha)
+        if consensus_mode == "distance" and response.answer is None:
+            rep_update = tracker.skip(response.node_id)
+        elif consensus_mode == "distance":
+            reference = cons_w.answer if signal == "consensus" else expected
+            signal_s = 0.0 if reference is None else 1.0 - relative_distance(response.answer, reference)
+            rep_update = tracker.update(response.node_id, signal_s, alpha=alpha)
+        else:
+            if signal == "consensus":
+                signal_ok = response.answer is not None and response.answer == cons_w.answer
+            else:
+                signal_ok = correct
+            rep_update = tracker.update(response.node_id, signal_ok, alpha=alpha)
         result.updates[response.node_id] = rep_update
 
         # Erros absoluto e relativo (observacionais, não usados no score).

@@ -20,7 +20,7 @@ from typing import Optional
 
 from . import behavior
 from .answer import Answer
-from .consensus import weighted_consensus
+from .distance import choose_baseline, choose_weighted
 from .election import elect_leader, pick_auditor
 from .ledger import Ledger, RoundRecord
 from .protocol import (
@@ -179,7 +179,7 @@ class SimulatedNetwork:
             attack=attack,
             colluders=colluders,
         )
-        cons = weighted_consensus(list(record.responses), state.consensus.weights())
+        cons = choose_weighted(list(record.responses), state.consensus.weights(), cfg.consensus_mode)
 
         objective = objective_check(state, record)
         votes: dict[str, Vote] = {}
@@ -262,7 +262,7 @@ class SimulatedNetwork:
         reached = [m for m in members if m in dist]
         hops = max((dist[m] for m in reached), default=0)
         responses = {m: answers.get(m) for m in reached}
-        cons = weighted_consensus(list(responses.items()), state.consensus.weights())
+        cons = choose_weighted(list(responses.items()), state.consensus.weights(), self.config.consensus_mode)
 
         record = calibration_record(
             prev_hash=group.ledger.head,
@@ -386,6 +386,7 @@ def log_round(
     mechanism: str,
     initial: float,
     is_test: bool,
+    consensus_mode: str = "exact",
 ) -> None:
     """Grava ``per_node.csv``, ``rounds.csv`` e ``leadership.csv`` da rodada.
 
@@ -394,7 +395,6 @@ def log_round(
     como sem consenso. A maioria simples continua sendo a linha de base sobre
     as respostas de todos os nós.
     """
-    from .consensus import majority_consensus
     from .engine import answer_dispersion
     from .reputation import ReputationUpdate
     from .schemas import RoundResult
@@ -408,7 +408,7 @@ def log_round(
     reference_consensus = committed.get(anchor) if anchor else None
     reference = next((o for o in outcomes if o.is_reference), outcomes[0] if outcomes else None)
 
-    cons_m = majority_consensus([(r.node_id, r.answer) for r in responses])
+    cons_m = choose_baseline([(r.node_id, r.answer) for r in responses], consensus_mode)
     result = RoundResult(
         round_index=round_index,
         task_id=task_id,

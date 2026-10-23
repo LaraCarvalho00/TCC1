@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Optional, Sequence
 
 from .answer import Answer, normalize
-from .consensus import ConsensusResult
+from .consensus import ConsensusResult, majority_consensus, weighted_consensus
 
 
 def relative_distance(a: Optional[Answer], b: Optional[Answer]) -> float:
@@ -94,3 +94,21 @@ def weighted_medoid(responses: Sequence[tuple[str, Optional[Answer]]], reputatio
 def plain_medoid(responses: Sequence[tuple[str, Optional[Answer]]]) -> ConsensusResult:
     """Medoide sem peso: a linha de base no lugar da maioria simples."""
     return medoid([answer for _node, answer in responses])
+
+
+def choose_weighted(
+    responses: Sequence[tuple[str, Optional[Answer]]],
+    reputations: dict[str, float],
+    mode: str,
+) -> ConsensusResult:
+    """Consenso da rede. ``exact`` é o voto ponderado de hoje."""
+    if mode == "distance":
+        return weighted_medoid(responses, reputations)
+    return weighted_consensus(responses, reputations)
+
+
+def choose_baseline(responses: Sequence[tuple[str, Optional[Answer]]], mode: str) -> ConsensusResult:
+    """Linha de base sem reputação. ``exact`` é a maioria simples."""
+    if mode == "distance":
+        return plain_medoid(responses)
+    return majority_consensus(responses)

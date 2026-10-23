@@ -35,14 +35,16 @@ from typing import Any, Iterable, Optional
 
 from .answer import Answer, normalize
 from .behavior import AUDITOR_ATTACKS, LEADER_ATTACKS  # noqa: F401 (reexportados)
-from .consensus import ConsensusResult, weighted_consensus
+from .consensus import ConsensusResult
 from .defenses import DefenseConfig
+from .distance import choose_weighted, relative_distance
 from .ledger import RoundRecord, canonical_hash
 from .reputation import ReputationTracker, ReputationUpdate
 from .schedule import DEFAULT_TEST_EVERY, is_test_round
 from .topology import node_sort_key
 
 SIGNALS = ("truth", "consensus", "hybrid")
+CONSENSUS_MODES = ("exact", "distance")
 
 # Motivos de recusa que qualquer nó consegue reproduzir a partir do registro.
 OBJECTIVE_REASONS = ("false_consensus", "forged")
@@ -62,10 +64,13 @@ class ProtocolConfig:
     bootstrap_margin: float = 0.05
     election_caution: float = 2.0
     defense: DefenseConfig = field(default_factory=DefenseConfig)
+    consensus_mode: str = "exact"
 
     def __post_init__(self) -> None:
         if self.signal not in SIGNALS:
             raise ValueError(f"signal deve ser um de {SIGNALS!r}.")
+        if self.consensus_mode not in CONSENSUS_MODES:
+            raise ValueError(f"consensus_mode deve ser um de {CONSENSUS_MODES!r}.")
 
     @property
     def consensus_alpha(self) -> Optional[float]:
@@ -178,14 +183,22 @@ def compute_round(
     ataque de consenso falso); ``"auto"`` usa o consenso ponderado.
     """
     pairs = _pairs(responses)
-    result = weighted_consensus(pairs, state.consensus.weights())
+    mode = state.config.consensus_mode
+    result = choose_weighted(pairs, state.consensus.weights(), mode)
     reference = result.answer if consensus == "auto" else normalize(consensus)
     after = state.clone()
     updates: dict[str, ReputationUpdate] = {}
     if state.config.signal != "truth":
         for node_id, answer in pairs:
-            agree = answer is not None and reference is not None and answer == reference
-            updates[node_id] = after.consensus.update(node_id, agree, alpha=state.config.consensus_alpha)
+            if mode == "distance":
+                if answer is None:
+                    updates[node_id] = after.consensus.skip(node_id)
+                    continue
+                signal = 0.0 if reference is None else 1.0 - relative_distance(answer, reference)
+                updates[node_id] = after.consensus.update(node_id, signal, alpha=state.config.consensus_alpha)
+            else:
+                agree = answer is not None and reference is not None and answer == reference
+                updates[node_id] = after.consensus.update(node_id, agree, alpha=state.config.consensus_alpha)
     return result, reference, after.snapshot(), updates
 
 
@@ -498,10 +511,21 @@ def apply_record(state: NetworkState, record: RoundRecord) -> None:
                 del history[:-max(1, state.config.availability_window)]
         alpha = state.config.oracle_alpha
         for nid, answer in record.graded:
-            correct = answer is not None and normalize(answer) == normalize(record.expected)
-            state.consensus.update(nid, correct, alpha=alpha)
-            if state.split:
-                state.power.update(nid, correct, alpha=alpha)
+            if state.config.consensus_mode == "distance":
+                if answer is None:
+                    state.consensus.skip(nid)
+                    if state.split:
+                        state.power.skip(nid)
+                    continue
+                signal = 1.0 - relative_distance(answer, record.expected)
+                state.consensus.update(nid, signal, alpha=alpha)
+                if state.split:
+                    state.power.update(nid, signal, alpha=alpha)
+            else:
+                correct = answer is not None and normalize(answer) == normalize(record.expected)
+                state.consensus.update(nid, correct, alpha=alpha)
+                if state.split:
+                    state.power.update(nid, correct, alpha=alpha)
 
 
 def replay(records: Iterable[RoundRecord], node_ids: Iterable[str], config: ProtocolConfig) -> NetworkState:
