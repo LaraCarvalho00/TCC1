@@ -40,6 +40,7 @@ from .core.protocol import (
     MALICIOUS_STRATEGIES,
     SIGNALS,
     ProtocolConfig,
+    malicious_acts_honest,
     oracle_round,
     plan_audits,
 )
@@ -142,11 +143,13 @@ def run_simulation(args: argparse.Namespace) -> dict:
     signal = getattr(args, "signal", "truth")
     defense = defense_from_args(args)
     audit_mode = getattr(args, "audit_mode", "fixed")
-    audited_rounds = (
-        plan_audits(args.seed, args.rounds, test_every, float(getattr(args, "audit_p", 0.1)))
-        if audit_mode == "random"
-        else frozenset()
-    )
+    override = getattr(args, "audited_rounds_override", None)
+    if override is not None:
+        audited_rounds = frozenset(override)
+    elif audit_mode == "random":
+        audited_rounds = plan_audits(args.seed, args.rounds, test_every, float(getattr(args, "audit_p", 0.1)))
+    else:
+        audited_rounds = frozenset()
     protocol = ProtocolConfig(
         signal=signal,
         alpha=args.alpha,
@@ -183,10 +186,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
             model_answers = getattr(args, "model_answers", None)
             answer_bank = getattr(args, "answer_bank", None)
             use_noise = getattr(args, "malicious_answer", "fixed") == "noise"
-            laying_low = (
-                getattr(args, "malicious_strategy", "always") == "on_off"
-                and round_index < int(getattr(args, "honest_rounds", 5))
-            )
+            laying_low = malicious_acts_honest(round_index, protocol)
             shared_noise = None
             if use_noise and bcfg.malicious_collusion_value is not None and not laying_low:
                 base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
@@ -443,7 +443,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--malicious-strategy", choices=MALICIOUS_STRATEGIES, default="always", dest="malicious_strategy",
-        help="always = ataca sempre; on_off = imita honesto nas primeiras rodadas.",
+        help="always = ataca sempre; on_off = imita no início; knows_schedule = conhece o calendário fixo.",
     )
     parser.add_argument(
         "--honest-rounds", type=int, default=5, dest="honest_rounds",

@@ -32,6 +32,7 @@ from .protocol import (
     calibration_record,
     decide,
     leaderless_calibration_round,
+    malicious_acts_honest,
     objective_check,
     oracle_record,
     oracle_round,
@@ -96,11 +97,8 @@ class SimulatedNetwork:
 
     # ------------------------------------------------------------------
     def _laying_low(self, round_index: int) -> bool:
-        """Malicioso estratégico ainda na fase em que imita um honesto."""
-        return (
-            self.config.malicious_strategy == "on_off"
-            and round_index < self.config.honest_rounds
-        )
+        """Malicioso estratégico imita um honesto nesta rodada."""
+        return malicious_acts_honest(round_index, self.config)
 
     def malicious(self, node_id: str) -> bool:
         return self.profiles.get(node_id) == behavior.MALICIOUS

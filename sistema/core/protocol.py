@@ -46,7 +46,7 @@ from .topology import node_sort_key
 
 SIGNALS = ("truth", "consensus", "hybrid")
 CONSENSUS_MODES = ("exact", "distance")
-MALICIOUS_STRATEGIES = ("always", "on_off")
+MALICIOUS_STRATEGIES = ("always", "on_off", "knows_schedule")
 AUDIT_MODES = ("fixed", "random")
 
 # Motivos de recusa que qualquer nó consegue reproduzir a partir do registro.
@@ -183,6 +183,27 @@ def plan_audits(seed, n_rounds: int, test_every: int, probability: float) -> fro
         if rng.random() < probability:
             chosen.add(index)
     return frozenset(chosen)
+
+
+def malicious_acts_honest(round_index: int, config: ProtocolConfig) -> bool:
+    """O malicioso imita um honesto nesta rodada.
+
+    ``on_off`` só cobre as primeiras ``honest_rounds``. ``knows_schedule``
+    também cobre o que é previsível: a calibração e, no calendário fixo, toda
+    rodada em que o protocolo usa o gabarito. No sorteio aleatório ele não
+    consulta ``audited_rounds``.
+    """
+    if config.malicious_strategy == "on_off":
+        return round_index < config.honest_rounds
+    if config.malicious_strategy != "knows_schedule":
+        return False
+    if round_index < config.honest_rounds:
+        return True
+    if config.signal != "consensus" and round_index < config.defense.calibration_rounds:
+        return True
+    if config.audit_mode == "random":
+        return False
+    return oracle_round(round_index, config)
 
 
 def oracle_round(round_index: int, config: ProtocolConfig) -> bool:

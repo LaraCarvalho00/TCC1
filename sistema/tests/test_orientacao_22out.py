@@ -192,3 +192,48 @@ class RequestedMeasuresTest(unittest.TestCase):
         self.assertEqual(summary["dynamic"]["auditor_malicious_rounds"], malicious)
         self.assertEqual(summary["dynamic"]["auditor_malicious_vetoes"], vetoes)
         self.assertGreater(malicious, 0)
+
+
+class KnowsScheduleTest(unittest.TestCase):
+    def test_fixed_calendar_honest_on_predictable_rounds(self):
+        honest_idx = {0, 1, 2, 3, 4, 9, 19, 29, 39, 49}
+        args = _args(
+            nodes=10, malicious=0.4, rounds=50, seed=2, orchestration="fixed",
+            signal="hybrid", audit_mode="fixed", malicious_strategy="knows_schedule",
+            honest_rounds=5, collusion_value=999, defense="none",
+        )
+        run_simulation(args)
+        with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
+            rows = [row for row in csv.DictReader(handle) if row["profile"] == "malicious"]
+        by_round: dict[int, list[str]] = {}
+        for row in rows:
+            by_round.setdefault(int(row["round_index"]), []).append(row["answer"])
+        self.assertEqual(set(by_round), set(range(50)))
+        for index, answers in by_round.items():
+            if index in honest_idx:
+                self.assertTrue(all(answer != "999" for answer in answers), index)
+            else:
+                self.assertTrue(all(answer == "999" for answer in answers), index)
+
+    def test_random_audit_does_not_change_malicious_answers(self):
+        def answers(audited):
+            args = _args(
+                nodes=8, malicious=0.5, rounds=20, seed=4, orchestration="fixed",
+                signal="consensus", audit_mode="random", malicious_strategy="knows_schedule",
+                honest_rounds=5, collusion_value=999, defense="none",
+                audited_rounds_override=audited,
+            )
+            run_simulation(args)
+            with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
+                return [
+                    (row["round_index"], row["node_id"], row["answer"])
+                    for row in csv.DictReader(handle)
+                    if row["profile"] == "malicious"
+                ]
+
+        first = answers(frozenset({1, 3, 8}))
+        second = answers(frozenset({2, 6, 12, 15}))
+        self.assertEqual(first, second)
+        attacked = [item for item in first if int(item[0]) == 8]
+        self.assertTrue(attacked)
+        self.assertTrue(all(item[2] == "999" for item in attacked))
