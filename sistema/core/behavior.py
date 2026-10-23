@@ -123,6 +123,29 @@ def simulate_answer(
     raise ValueError(f"Perfil desconhecido: {profile!r}")
 
 
+def honest_base(rng: random.Random, expected: Optional[Answer], config: BehaviorConfig, bank, task_id: str):
+    """Resposta que um honesto produziria, no gerador informado."""
+    if bank is not None:
+        return rng.choice(bank[task_id])
+    answer, _latency = simulate_answer(HONEST, expected, config, rng)
+    return answer
+
+
+def corrupt_with_noise(base: Optional[Answer], rng: random.Random) -> float:
+    """Corrupção ``σ · (|b| + 1) · 10^k``.
+
+    ``k`` é contínuo e uniforme em ``[3, 6]``. ``σ`` é um sinal, −1 ou +1:
+    um valor contínuo em (−1, 1) pode deixar ``|m| < 1000``, e o teste da
+    orientação exige o módulo mínimo em todo sorteio. Com ``|σ| = 1`` e
+    ``k ≥ 3``, ``|m| ≥ 1000`` e o resultado não é zero.
+    """
+    if base is None:
+        base = 0
+    exponent = rng.uniform(3.0, 6.0)
+    sign = rng.choice((-1, 1))
+    return sign * (abs(float(base)) + 1.0) * (10.0 ** exponent)
+
+
 def _wrong(expected: Optional[Answer], rng: random.Random) -> Answer:
     """Gera um valor incorreto plausível (próximo ao esperado, quando houver)."""
     if expected is None:

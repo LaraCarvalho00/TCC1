@@ -75,6 +75,7 @@ def build_profiles(
 def run_simulation(args: argparse.Namespace) -> dict:
     """Executa a simulação e retorna o resumo gerado pelo MetricsLogger."""
     rng = random.Random(args.seed)
+    noise_rng = random.Random(f"{args.seed}:noise")
     profiles = build_profiles(args.nodes, args.malicious, args.unstable)
     node_ids = list(profiles)
 
@@ -150,9 +151,23 @@ def run_simulation(args: argparse.Namespace) -> dict:
 
             model_answers = getattr(args, "model_answers", None)
             answer_bank = getattr(args, "answer_bank", None)
+            use_noise = getattr(args, "malicious_answer", "fixed") == "noise"
+            shared_noise = None
+            if use_noise and bcfg.malicious_collusion_value is not None:
+                base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
+                shared_noise = behavior.corrupt_with_noise(base, noise_rng)
             responses: list[NodeResponse] = []
             for node_id in node_ids:
-                if answer_bank is not None and profiles[node_id] == behavior.HONEST:
+                if use_noise and profiles[node_id] == behavior.MALICIOUS:
+                    # Consome o gerador principal como o perfil fixo faria, para
+                    # os honestos seguintes verem a mesma sequência.
+                    _discarded, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
+                    if shared_noise is not None:
+                        answer = shared_noise
+                    else:
+                        base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
+                        answer = behavior.corrupt_with_noise(base, noise_rng)
+                elif answer_bank is not None and profiles[node_id] == behavior.HONEST:
                     # Cada nó honesto sorteia uma das respostas que o modelo gerou
                     # para esta pergunta (banco gerado com amostragem).
                     answer, latency = rng.choice(answer_bank[task["id"]]), 0
@@ -355,6 +370,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--collusion-value", type=int, default=None,
         help="Valor de conluio (todos os maliciosos respondem este valor).",
+    )
+    parser.add_argument(
+        "--malicious-answer", choices=("fixed", "noise"), default="fixed", dest="malicious_answer",
+        help="fixed = 999 ou ±5, como hoje; noise = resposta honesta corrompida.",
     )
     parser.add_argument(
         "--unstable-p-drop", type=float, default=0.3, dest="unstable_p_drop",

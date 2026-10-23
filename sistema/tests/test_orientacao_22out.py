@@ -1,10 +1,16 @@
 """Testes da orientação de 22/10. O padrão do protocolo não entra aqui."""
+import csv
+import os
+import random
 import unittest
 
+from sistema.core.behavior import corrupt_with_noise
 from sistema.core.defenses import DefenseConfig
 from sistema.core.distance import medoid, relative_distance
 from sistema.core.protocol import NetworkState, ProtocolConfig, apply_record, oracle_record
 from sistema.core.reputation import ReputationTracker
+from sistema.simulate import run_simulation
+from sistema.tests.test_network import _args
 
 
 class DistanceTest(unittest.TestCase):
@@ -43,3 +49,35 @@ class DistanceConsensusTest(unittest.TestCase):
         tracker.update("bad", False, alpha=0.8)
         self.assertAlmostEqual(tracker.get("ok"), 0.9)
         self.assertAlmostEqual(tracker.get("bad"), 0.1)
+
+
+class NoiseAnswerTest(unittest.TestCase):
+    def test_every_draw_is_far_from_the_base(self):
+        rng = random.Random(0)
+        for _ in range(10_000):
+            base = rng.choice([0, 1, 18, 20, 999, -7])
+            corrupted = corrupt_with_noise(base, rng)
+            self.assertGreaterEqual(abs(corrupted), 1000)
+            self.assertGreater(relative_distance(corrupted, base), 0.99)
+
+    def _answers(self, collusion):
+        args = _args(
+            nodes=10, malicious=0.5, rounds=2, seed=7,
+            collusion_value=collusion, malicious_answer="noise", orchestration="fixed",
+        )
+        run_simulation(args)
+        with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
+            return [row for row in csv.DictReader(handle) if row["profile"] == "malicious"]
+
+    def test_collusion_sends_one_value(self):
+        by_round: dict[str, set[str]] = {}
+        for row in self._answers(999):
+            by_round.setdefault(row["round_index"], set()).add(row["answer"])
+            self.assertGreaterEqual(abs(float(row["answer"])), 1000)
+        self.assertTrue(by_round)
+        self.assertTrue(all(len(values) == 1 for values in by_round.values()))
+
+    def test_without_collusion_the_values_differ(self):
+        rows = self._answers(None)
+        first = [row["answer"] for row in rows if row["round_index"] == "0"]
+        self.assertGreater(len(set(first)), 1)
