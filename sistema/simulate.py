@@ -39,6 +39,7 @@ from .core.protocol import (
     CONSENSUS_MODES,
     MALICIOUS_STRATEGIES,
     SIGNALS,
+    VALIDATION_SCORES,
     ProtocolConfig,
     malicious_acts_honest,
     oracle_round,
@@ -173,6 +174,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
         audit_mode=audit_mode,
         audited_rounds=audited_rounds,
         alpha_up=alpha_up,
+        validation_score=getattr(args, "validation_score", "graded"),
     )
     network = None
     if orchestration == "dynamic":
@@ -465,6 +467,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--noise-distance", type=float, default=0.2, dest="noise_distance",
         help="Distância relativa do ruído sutil, em (0, 1). Padrão 0,2.",
+    )
+    parser.add_argument(
+        "--validation-score", choices=VALIDATION_SCORES, default="graded", dest="validation_score",
+        help="graded = 1 − distância no gabarito; exact = 1 só se a resposta for igual.",
     )
     parser.add_argument(
         "--malicious-strategy", choices=MALICIOUS_STRATEGIES, default="always", dest="malicious_strategy",

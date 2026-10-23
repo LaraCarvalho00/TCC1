@@ -43,6 +43,22 @@ class DistanceConsensusTest(unittest.TestCase):
         self.assertAlmostEqual(state.consensus.get("n1"), 0.1 + 0.8 * (1 - 2 / 38))
         self.assertAlmostEqual(state.consensus.get("n2"), 0.1 + 0.8 * (1 - 981 / 1017))
 
+    def test_exact_validation_score_is_binary(self):
+        config = ProtocolConfig(
+            consensus_mode="distance",
+            validation_score="exact",
+            defense=DefenseConfig(split_alpha=True, oracle_alpha=0.8),
+        )
+        state = NetworkState(["n0", "n1", "n2"], config)
+        record = oracle_record(
+            prev_hash="0" * 64, round_index=0, task_id="t", expected=18,
+            graded={"n0": 18, "n1": 20, "n2": 999},
+        )
+        apply_record(state, record)
+        self.assertAlmostEqual(state.consensus.get("n0"), 0.9)
+        self.assertAlmostEqual(state.consensus.get("n1"), 0.1)
+        self.assertAlmostEqual(state.consensus.get("n2"), 0.1)
+
     def test_exact_mode_keeps_binary_signal(self):
         tracker = ReputationTracker(["ok", "bad"], alpha=0.8, initial=0.5)
         tracker.update("ok", True, alpha=0.8)

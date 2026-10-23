@@ -48,6 +48,7 @@ SIGNALS = ("truth", "consensus", "hybrid")
 CONSENSUS_MODES = ("exact", "distance")
 MALICIOUS_STRATEGIES = ("always", "on_off", "knows_schedule")
 AUDIT_MODES = ("fixed", "random")
+VALIDATION_SCORES = ("graded", "exact")
 
 # Motivos de recusa que qualquer nó consegue reproduzir a partir do registro.
 OBJECTIVE_REASONS = ("false_consensus", "forged")
@@ -73,6 +74,7 @@ class ProtocolConfig:
     audit_mode: str = "fixed"
     audited_rounds: frozenset[int] = field(default_factory=frozenset)
     alpha_up: float = 0.1
+    validation_score: str = "graded"
 
     def __post_init__(self) -> None:
         if self.signal not in SIGNALS:
@@ -83,6 +85,8 @@ class ProtocolConfig:
             raise ValueError(f"malicious_strategy deve ser um de {MALICIOUS_STRATEGIES!r}.")
         if self.audit_mode not in AUDIT_MODES:
             raise ValueError(f"audit_mode deve ser um de {AUDIT_MODES!r}.")
+        if self.validation_score not in VALIDATION_SCORES:
+            raise ValueError(f"validation_score deve ser um de {VALIDATION_SCORES!r}.")
         object.__setattr__(self, "audited_rounds", frozenset(self.audited_rounds))
 
     @property
@@ -570,7 +574,10 @@ def apply_record(state: NetworkState, record: RoundRecord) -> None:
                     if state.split:
                         state.power.skip(nid)
                     continue
-                signal = 1.0 - relative_distance(answer, record.expected)
+                if state.config.validation_score == "exact":
+                    signal = 1.0 if normalize(answer) == normalize(record.expected) else 0.0
+                else:
+                    signal = 1.0 - relative_distance(answer, record.expected)
                 state.consensus.update(nid, signal, alpha=alpha, ground_truth=True)
                 if state.split:
                     state.power.update(nid, signal, alpha=alpha, ground_truth=True)
