@@ -9,6 +9,7 @@ Uso (na raiz do repositório)::
 """
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import os
@@ -107,7 +108,7 @@ def _blank(value):
     return "" if value is None else value
 
 
-def executar(job: dict, tarefas, banco) -> tuple[dict, str]:
+def executar(job: dict, tarefas, banco, brutos: str = BRUTOS) -> tuple[dict, str]:
     config = CONFIGS[job["config"]]
     mal = int(round(job["fracao"] * 100))
     inst = int(round(job["fracao_instavel"] * 100))
@@ -120,7 +121,7 @@ def executar(job: dict, tarefas, banco) -> tuple[dict, str]:
         malicious=job["fracao"],
         unstable=job["fracao_instavel"],
         seed=job["semente"],
-        output=BRUTOS,
+        output=brutos,
         nodes=50,
         rounds=50,
         orchestration="dynamic",
@@ -177,7 +178,7 @@ def executar(job: dict, tarefas, banco) -> tuple[dict, str]:
         "reputacao_final_honestos": _blank(finais.get("honest")),
         "reputacao_final_maliciosos": _blank(finais.get("malicious")),
     }
-    return linha, os.path.join(BRUTOS, exp_id)
+    return linha, os.path.join(brutos, exp_id)
 
 
 def acumular_reputacao(pasta: str, chave: tuple, acumulado: dict) -> None:
@@ -243,14 +244,19 @@ def gravar_reputacao(acumulado: dict, path: str) -> None:
                 })
 
 
-def main() -> None:
+def main(argv=None) -> None:
+    parser = argparse.ArgumentParser(description="Comparação da gênese, da auditoria e do calendário.")
+    parser.add_argument("--saida", default=SAIDA, help="Pasta dos CSVs. O padrão é a pasta já usada.")
+    opcoes = parser.parse_args(argv)
+    saida = opcoes.saida
+    brutos = os.path.join(saida, "brutos")
     jobs = trabalhos()
     if len(jobs) != 1400:
         raise SystemExit(f"grade com {len(jobs)} execuções; o pedido é 1.400.")
     tarefas, banco = carregar_banco(BANCO)
-    os.makedirs(BRUTOS, exist_ok=True)
-    os.makedirs(SAIDA, exist_ok=True)
-    caminho = os.path.join(SAIDA, "execucoes.csv")
+    os.makedirs(brutos, exist_ok=True)
+    os.makedirs(saida, exist_ok=True)
+    caminho = os.path.join(saida, "execucoes.csv")
     acumulado: dict = {}
     linhas = []
     inicio = time.perf_counter()
@@ -258,7 +264,7 @@ def main() -> None:
         writer = csv.DictWriter(handle, fieldnames=CAMPOS)
         writer.writeheader()
         for indice, job in enumerate(jobs, start=1):
-            linha, pasta = executar(job, tarefas, banco)
+            linha, pasta = executar(job, tarefas, banco, brutos)
             writer.writerow(linha)
             handle.flush()
             linhas.append(linha)
@@ -267,13 +273,13 @@ def main() -> None:
                 decorrido = time.perf_counter() - inicio
                 print(f"{indice}/{len(jobs)} {decorrido:.0f}s {pasta}", flush=True)
     resumo = resumir(linhas)
-    with open(os.path.join(SAIDA, "resumo.csv"), "w", newline="", encoding="utf-8") as handle:
+    with open(os.path.join(saida, "resumo.csv"), "w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(resumo[0]))
         writer.writeheader()
         writer.writerows(resumo)
-    gravar_reputacao(acumulado, os.path.join(SAIDA, "reputacao_por_rodada.csv"))
+    gravar_reputacao(acumulado, os.path.join(saida, "reputacao_por_rodada.csv"))
     total = time.perf_counter() - inicio
-    print(f"{len(linhas)} execuções em {total:.1f}s -> {SAIDA}", flush=True)
+    print(f"{len(linhas)} execuções em {total:.1f}s -> {saida}", flush=True)
 
 
 if __name__ == "__main__":

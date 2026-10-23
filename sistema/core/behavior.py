@@ -131,6 +131,26 @@ def honest_base(rng: random.Random, expected: Optional[Answer], config: Behavior
     return answer
 
 
+def corrupt_relative(base: Optional[Answer], rng: random.Random, delta: float) -> float:
+    """Resposta a distância relativa ``delta`` da base.
+
+    ``r = (1 + δ) / (1 − δ)``. Com probabilidade 1/2, ``m = b · r``; senão,
+    ``m = b / r``. Para ``b ≠ 0`` isso dá ``relative_distance(m, b) = δ``.
+    Base zero, ou ausente, vira ``+1`` ou ``−1``.
+    """
+    if not 0.0 < delta < 1.0:
+        raise ValueError("noise_distance deve estar em (0, 1).")
+    if base is None:
+        base = 0
+    value = float(base)
+    if value == 0.0:
+        return rng.choice((-1.0, 1.0))
+    ratio = (1.0 + delta) / (1.0 - delta)
+    if rng.random() < 0.5:
+        return value * ratio
+    return value / ratio
+
+
 def corrupt_with_noise(base: Optional[Answer], rng: random.Random) -> float:
     """Corrupção ``σ · (|b| + 1) · 10^k``.
 

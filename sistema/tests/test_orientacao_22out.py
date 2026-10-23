@@ -4,7 +4,7 @@ import os
 import random
 import unittest
 
-from sistema.core.behavior import corrupt_with_noise
+from sistema.core.behavior import corrupt_relative, corrupt_with_noise
 from sistema.core.defenses import DefenseConfig
 from sistema.core.distance import medoid, relative_distance
 from sistema.core.protocol import NetworkState, ProtocolConfig, apply_record, oracle_record
@@ -81,6 +81,33 @@ class NoiseAnswerTest(unittest.TestCase):
         rows = self._answers(None)
         first = [row["answer"] for row in rows if row["round_index"] == "0"]
         self.assertGreater(len(set(first)), 1)
+
+
+class RelativeNoiseTest(unittest.TestCase):
+    def test_distance_matches_delta(self):
+        rng = random.Random(1)
+        for delta in (0.05, 0.2, 0.5):
+            for index in range(500):
+                positive = rng.uniform(0.01, 1000)
+                negative = -rng.uniform(0.01, 1000)
+                for base in (positive, negative):
+                    corrupted = corrupt_relative(base, rng, delta)
+                    self.assertLess(abs(relative_distance(corrupted, base) - delta), 1e-9, (delta, index))
+
+    def test_collusion_sends_one_value(self):
+        args = _args(
+            nodes=10, malicious=0.5, rounds=2, seed=7,
+            collusion_value=999, malicious_answer="noise", noise_mode="relative",
+            noise_distance=0.2, orchestration="fixed",
+        )
+        run_simulation(args)
+        with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
+            rows = [row for row in csv.DictReader(handle) if row["profile"] == "malicious"]
+        by_round: dict[str, set[str]] = {}
+        for row in rows:
+            by_round.setdefault(row["round_index"], set()).add(row["answer"])
+        self.assertTrue(by_round)
+        self.assertTrue(all(len(values) == 1 for values in by_round.values()))
 
 
 class UnstableAttributeTest(unittest.TestCase):

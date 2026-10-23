@@ -58,6 +58,13 @@ _DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), "results", "simulacao"
 # Funções públicas
 # ---------------------------------------------------------------------------
 
+def _corrupt(base, rng: random.Random, noise_mode: str, noise_distance: float):
+    """Ruído multiplicativo de hoje, ou ruído a uma distância relativa fixa."""
+    if noise_mode == "relative":
+        return behavior.corrupt_relative(base, rng, noise_distance)
+    return behavior.corrupt_with_noise(base, rng)
+
+
 def build_profiles(
     num_nodes: int,
     malicious_frac: float,
@@ -85,6 +92,8 @@ def run_simulation(args: argparse.Namespace) -> dict:
     """Executa a simulação e retorna o resumo gerado pelo MetricsLogger."""
     rng = random.Random(args.seed)
     noise_rng = random.Random(f"{args.seed}:noise")
+    noise_mode = getattr(args, "noise_mode", "multiplicative")
+    noise_distance = float(getattr(args, "noise_distance", 0.2))
     unstable_mode = getattr(args, "unstable_mode", "profile")
     if unstable_mode == "attribute":
         profiles = build_profiles(args.nodes, args.malicious, 0.0)
@@ -193,7 +202,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
             shared_noise = None
             if use_noise and bcfg.malicious_collusion_value is not None and not laying_low:
                 base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
-                shared_noise = behavior.corrupt_with_noise(base, noise_rng)
+                shared_noise = _corrupt(base, noise_rng, noise_mode, noise_distance)
             responses: list[NodeResponse] = []
             for node_id in node_ids:
                 if node_id in unstable_nodes and unstable_rng.random() < bcfg.unstable_p_drop:
@@ -206,7 +215,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
                         answer = shared_noise
                     else:
                         base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
-                        answer = behavior.corrupt_with_noise(base, noise_rng)
+                        answer = _corrupt(base, noise_rng, noise_mode, noise_distance)
                 elif answer_bank is not None and (
                     profiles[node_id] == behavior.HONEST or (laying_low and profiles[node_id] == behavior.MALICIOUS)
                 ):
@@ -448,6 +457,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--malicious-answer", choices=("fixed", "noise"), default="fixed", dest="malicious_answer",
         help="fixed = 999 ou ±5, como hoje; noise = resposta honesta corrompida.",
+    )
+    parser.add_argument(
+        "--noise-mode", choices=("multiplicative", "relative"), default="multiplicative", dest="noise_mode",
+        help="multiplicative = 10^k, como hoje; relative = distância relativa fixa.",
+    )
+    parser.add_argument(
+        "--noise-distance", type=float, default=0.2, dest="noise_distance",
+        help="Distância relativa do ruído sutil, em (0, 1). Padrão 0,2.",
     )
     parser.add_argument(
         "--malicious-strategy", choices=MALICIOUS_STRATEGIES, default="always", dest="malicious_strategy",
