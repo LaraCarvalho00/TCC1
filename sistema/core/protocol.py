@@ -45,6 +45,7 @@ from .topology import node_sort_key
 
 SIGNALS = ("truth", "consensus", "hybrid")
 CONSENSUS_MODES = ("exact", "distance")
+MALICIOUS_STRATEGIES = ("always", "on_off")
 
 # Motivos de recusa que qualquer nó consegue reproduzir a partir do registro.
 OBJECTIVE_REASONS = ("false_consensus", "forged")
@@ -65,12 +66,16 @@ class ProtocolConfig:
     election_caution: float = 2.0
     defense: DefenseConfig = field(default_factory=DefenseConfig)
     consensus_mode: str = "exact"
+    malicious_strategy: str = "always"
+    honest_rounds: int = 5
 
     def __post_init__(self) -> None:
         if self.signal not in SIGNALS:
             raise ValueError(f"signal deve ser um de {SIGNALS!r}.")
         if self.consensus_mode not in CONSENSUS_MODES:
             raise ValueError(f"consensus_mode deve ser um de {CONSENSUS_MODES!r}.")
+        if self.malicious_strategy not in MALICIOUS_STRATEGIES:
+            raise ValueError(f"malicious_strategy deve ser um de {MALICIOUS_STRATEGIES!r}.")
 
     @property
     def consensus_alpha(self) -> Optional[float]:

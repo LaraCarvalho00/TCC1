@@ -111,3 +111,32 @@ class UnstableAttributeTest(unittest.TestCase):
         with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
             answers = {row["answer"] for row in csv.DictReader(handle)}
         self.assertEqual(answers, {expected})
+
+
+class StrategicMaliciousTest(unittest.TestCase):
+    def test_on_off_waits_until_round_g(self):
+        args = _args(
+            nodes=20, malicious=0.5, rounds=6, seed=1, orchestration="dynamic",
+            collusion_value=999, leader_attack="forge", malicious_strategy="on_off",
+            honest_rounds=5, defense="none",
+        )
+        run_simulation(args)
+        with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
+            rows = [row for row in csv.DictReader(handle) if row["profile"] == "malicious"]
+        early = [row for row in rows if int(row["round_index"]) < 5]
+        late = [row for row in rows if int(row["round_index"]) == 5]
+        self.assertTrue(early and late)
+        self.assertTrue(all(row["answer"] != "999" for row in early))
+        self.assertTrue(all(row["answer"] == "999" for row in late))
+        with open(os.path.join(args.output, "leadership.csv"), newline="") as handle:
+            lead = list(csv.DictReader(handle))
+        forged_early = [
+            row for row in lead
+            if int(row["round_index"]) < 5 and row["leader_profile"] == "malicious" and row["attack"] == "forge"
+        ]
+        forged_late = [
+            row for row in lead
+            if int(row["round_index"]) == 5 and row["leader_profile"] == "malicious" and row["attack"] == "forge"
+        ]
+        self.assertEqual(forged_early, [])
+        self.assertTrue(forged_late)

@@ -95,6 +95,13 @@ class SimulatedNetwork:
         self._next_gid = 1
 
     # ------------------------------------------------------------------
+    def _laying_low(self, round_index: int) -> bool:
+        """Malicioso estratégico ainda na fase em que imita um honesto."""
+        return (
+            self.config.malicious_strategy == "on_off"
+            and round_index < self.config.honest_rounds
+        )
+
     def malicious(self, node_id: str) -> bool:
         return self.profiles.get(node_id) == behavior.MALICIOUS
 
@@ -166,7 +173,10 @@ class SimulatedNetwork:
         hops = max((dist[m] for m in reached), default=0)
         responses = {m: answers.get(m) for m in reached}
 
-        attack = behavior.leader_attack(self.profiles.get(leader, ""), self.attacks)
+        leader_profile = self.profiles.get(leader, "")
+        if self._laying_low(round_index):
+            leader_profile = behavior.HONEST
+        attack = behavior.leader_attack(leader_profile, self.attacks)
         prev = group.ledger.head
         record = propose_record(
             state,
@@ -185,7 +195,7 @@ class SimulatedNetwork:
         votes: dict[str, Vote] = {}
         for node in reached:
             honest = verify_record(state, record, node_id=node, own_answer=answers.get(node), prev_hash=prev, objective=objective)
-            if self.malicious(node):
+            if self.malicious(node) and not self._laying_low(round_index):
                 ok, reason = behavior.malicious_vote(
                     leader_is_colluder=self.malicious(leader),
                     is_auditor=node == auditor,
@@ -313,7 +323,14 @@ class SimulatedNetwork:
         )
         rejecters = 0
         if not self.config.defense.oracle_bypasses_quorum:
-            votes = {m: (behavior.malicious_oracle_vote() if self.malicious(m) else True) for m in group.members}
+            votes = {
+                m: (
+                    behavior.malicious_oracle_vote()
+                    if self.malicious(m) and not self._laying_low(round_index)
+                    else True
+                )
+                for m in group.members
+            }
             rejecters = sum(1 for ok in votes.values() if not ok)
             _, _, accepted = tally_quorum(votes, group.state.power.weights())
             if not accepted:

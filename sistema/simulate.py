@@ -34,7 +34,7 @@ from .core.defenses import DefenseConfig, preset, preset_names
 from .core.engine import process_round
 from .core.metrics import MetricsLogger, dynamic_summary
 from .core.network import SimulatedNetwork, log_round
-from .core.protocol import CONSENSUS_MODES, SIGNALS, ProtocolConfig, oracle_round
+from .core.protocol import CONSENSUS_MODES, MALICIOUS_STRATEGIES, SIGNALS, ProtocolConfig, oracle_round
 from .core.reputation import MECHANISMS, ReputationTracker
 from .core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from .core.schemas import NodeResponse
@@ -140,6 +140,8 @@ def run_simulation(args: argparse.Namespace) -> dict:
         test_every=test_every,
         defense=defense,
         consensus_mode=getattr(args, "consensus_mode", "exact"),
+        malicious_strategy=getattr(args, "malicious_strategy", "always"),
+        honest_rounds=int(getattr(args, "honest_rounds", 5)),
     )
     network = None
     if orchestration == "dynamic":
@@ -162,15 +164,19 @@ def run_simulation(args: argparse.Namespace) -> dict:
             model_answers = getattr(args, "model_answers", None)
             answer_bank = getattr(args, "answer_bank", None)
             use_noise = getattr(args, "malicious_answer", "fixed") == "noise"
+            laying_low = (
+                getattr(args, "malicious_strategy", "always") == "on_off"
+                and round_index < int(getattr(args, "honest_rounds", 5))
+            )
             shared_noise = None
-            if use_noise and bcfg.malicious_collusion_value is not None:
+            if use_noise and bcfg.malicious_collusion_value is not None and not laying_low:
                 base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
                 shared_noise = behavior.corrupt_with_noise(base, noise_rng)
             responses: list[NodeResponse] = []
             for node_id in node_ids:
                 if node_id in unstable_nodes and unstable_rng.random() < bcfg.unstable_p_drop:
                     answer, latency = None, 0
-                elif use_noise and profiles[node_id] == behavior.MALICIOUS:
+                elif use_noise and profiles[node_id] == behavior.MALICIOUS and not laying_low:
                     # Consome o gerador principal como o perfil fixo faria, para
                     # os honestos seguintes verem a mesma sequência.
                     _discarded, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
@@ -179,14 +185,23 @@ def run_simulation(args: argparse.Namespace) -> dict:
                     else:
                         base = behavior.honest_base(noise_rng, expected, bcfg, answer_bank, task["id"])
                         answer = behavior.corrupt_with_noise(base, noise_rng)
-                elif answer_bank is not None and profiles[node_id] == behavior.HONEST:
+                elif answer_bank is not None and (
+                    profiles[node_id] == behavior.HONEST or (laying_low and profiles[node_id] == behavior.MALICIOUS)
+                ):
                     # Cada nó honesto sorteia uma das respostas que o modelo gerou
                     # para esta pergunta (banco gerado com amostragem).
                     answer, latency = rng.choice(answer_bank[task["id"]]), 0
-                elif model_answers is not None and profiles[node_id] == behavior.HONEST:
+                elif model_answers is not None and (
+                    profiles[node_id] == behavior.HONEST or (laying_low and profiles[node_id] == behavior.MALICIOUS)
+                ):
                     answer, latency = model_answers.get(task["id"]), 0
                 else:
-                    answer, latency = behavior.simulate_answer(profiles[node_id], expected, bcfg, rng)
+                    answering_as = (
+                        behavior.HONEST
+                        if laying_low and profiles[node_id] == behavior.MALICIOUS
+                        else profiles[node_id]
+                    )
+                    answer, latency = behavior.simulate_answer(answering_as, expected, bcfg, rng)
                 if node_id in unstable_nodes:
                     latency = unstable_rng.randint(*bcfg.unstable_latency_ms)
                 responses.append(
@@ -398,6 +413,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--malicious-answer", choices=("fixed", "noise"), default="fixed", dest="malicious_answer",
         help="fixed = 999 ou ±5, como hoje; noise = resposta honesta corrompida.",
+    )
+    parser.add_argument(
+        "--malicious-strategy", choices=MALICIOUS_STRATEGIES, default="always", dest="malicious_strategy",
+        help="always = ataca sempre; on_off = imita honesto nas primeiras rodadas.",
+    )
+    parser.add_argument(
+        "--honest-rounds", type=int, default=5, dest="honest_rounds",
+        help="Rodadas iniciais em que a estratégia on_off imita um honesto.",
     )
     parser.add_argument(
         "--unstable-p-drop", type=float, default=0.3, dest="unstable_p_drop",
