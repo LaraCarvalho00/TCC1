@@ -101,6 +101,7 @@ ROUND_FIELDS = [
     "pct_honest_exact",      # honestos com resposta igual ao gabarito / honestos
     "pct_honest_responded",  # honestos que responderam / honestos
     "audited",               # 1 se a rodada teve gabarito
+    "calibration",           # 1 se a rodada é de calibração
 ]
 
 HISTORY_FIELDS = [
@@ -314,6 +315,7 @@ class MetricsLogger:
         is_tie_majority: bool,
         is_test: bool = False,
         audited: bool = False,
+        calibration: bool = False,
     ) -> None:
         latencies = [r.latency_ms for r in result.responses if r.answer is not None]
         mean_latency = round(statistics.mean(latencies), 1) if latencies else 0.0
@@ -349,6 +351,7 @@ class MetricsLogger:
             "test_round": (result.round_index + 1) if is_test else "",
             **_honest_fractions(result),
             "audited": int(audited),
+            "calibration": int(calibration),
         }
         self.round_rows.append(row)
         self._round_stream.write(row)
@@ -366,6 +369,12 @@ class MetricsLogger:
         test_rows = [r for r in self.round_rows if int(r.get("is_test", 0)) == 1]
         test_weighted = sum(r["consensus_correct"] for r in test_rows)
         test_majority = sum(r["majority_correct"] for r in test_rows)
+        no_oracle = [
+            r for r in self.round_rows
+            if int(r.get("audited", 0)) == 0 and int(r.get("calibration", 0)) == 0
+        ]
+        no_oracle_weighted = sum(int(r["consensus_correct"]) for r in no_oracle)
+        no_oracle_majority = sum(int(r["majority_correct"]) for r in no_oracle)
         latencies = [r["latency_ms"] for r in self.per_node_rows if r["answered"]]
 
         # Reputação final por perfil (instantâneo)
@@ -396,6 +405,9 @@ class MetricsLogger:
             "n_test_rounds": len(test_rows),
             "consensus_accuracy_weighted_on_tests": _ratio(test_weighted, len(test_rows)),
             "consensus_accuracy_majority_on_tests": _ratio(test_majority, len(test_rows)),
+            "consensus_accuracy_weighted_no_oracle": _ratio(no_oracle_weighted, len(no_oracle)),
+            "consensus_accuracy_majority_no_oracle": _ratio(no_oracle_majority, len(no_oracle)),
+            "n_rounds_no_oracle": len(no_oracle),
             "tests": [
                 {
                     "round": int(r["test_round"]),

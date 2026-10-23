@@ -237,3 +237,19 @@ class KnowsScheduleTest(unittest.TestCase):
         attacked = [item for item in first if int(item[0]) == 8]
         self.assertTrue(attacked)
         self.assertTrue(all(item[2] == "999" for item in attacked))
+
+
+class NoOracleAccuracyTest(unittest.TestCase):
+    def test_hybrid_with_three_calibration_rounds_leaves_42(self):
+        summary = run_simulation(_args(
+            nodes=4, malicious=0.0, rounds=50, orchestration="fixed", signal="hybrid",
+            calibration_rounds=3, defense="none", seed=1,
+        ))
+        self.assertEqual(summary["n_rounds_no_oracle"], 42)
+
+    def test_consensus_signal_counts_every_round(self):
+        summary = run_simulation(_args(
+            nodes=4, malicious=0.0, rounds=50, orchestration="fixed", signal="consensus",
+            seed=1,
+        ))
+        self.assertEqual(summary["n_rounds_no_oracle"], 50)

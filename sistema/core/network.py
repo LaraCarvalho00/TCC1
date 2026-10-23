@@ -403,6 +403,7 @@ def log_round(
     is_test: bool,
     consensus_mode: str = "exact",
     audited: bool = False,
+    calibration: bool = False,
 ) -> None:
     """Grava ``per_node.csv``, ``rounds.csv`` e ``leadership.csv`` da rodada.
 
@@ -492,6 +493,7 @@ def log_round(
         is_tie_majority=cons_m.is_tie,
         is_test=is_test,
         audited=audited,
+        calibration=calibration,
     )
     for outcome in outcomes:
         length, head = chains.get(outcome.gid, (0, ""))

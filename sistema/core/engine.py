@@ -46,6 +46,7 @@ def process_round(
     alpha: Optional[float] = None,
     consensus_mode: str = "exact",
     audited: bool = False,
+    calibration: bool = False,
 ) -> RoundResult:
     """Processa uma rodada completa após a coleta de respostas.
 
@@ -177,6 +178,7 @@ def process_round(
         is_tie_majority=cons_m.is_tie,
         is_test=is_test,
         audited=audited,
+        calibration=calibration,
     )
 
     return result

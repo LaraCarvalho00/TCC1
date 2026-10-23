@@ -182,6 +182,9 @@ def run_simulation(args: argparse.Namespace) -> dict:
             task = tasks[round_index % len(tasks)]
             expected = normalize(task["answer"])
             this_is_test = is_test_round(round_index, test_every)
+            this_is_calibration = (
+                protocol.signal != "consensus" and round_index < protocol.defense.calibration_rounds
+            )
 
             model_answers = getattr(args, "model_answers", None)
             answer_bank = getattr(args, "answer_bank", None)
@@ -258,6 +261,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 alpha=round_alpha,
                 consensus_mode=protocol.consensus_mode,
                 audited=oracle_round(round_index, protocol),
+                calibration=this_is_calibration,
             )
     except BaseException:
         logger.close()
@@ -374,6 +378,10 @@ def _dynamic_round(
         is_test=is_test,
         consensus_mode=network.config.consensus_mode,
         audited=oracle_round(round_index, network.config),
+        calibration=(
+            network.config.signal != "consensus"
+            and round_index < network.config.defense.calibration_rounds
+        ),
     )
 
 
