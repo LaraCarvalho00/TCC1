@@ -116,13 +116,17 @@ def process_round(
         elif consensus_mode == "distance":
             reference = cons_w.answer if signal == "consensus" else expected
             signal_s = 0.0 if reference is None else 1.0 - relative_distance(response.answer, reference)
-            rep_update = tracker.update(response.node_id, signal_s, alpha=alpha)
+            rep_update = tracker.update(
+                response.node_id, signal_s, alpha=alpha, ground_truth=signal != "consensus",
+            )
         else:
             if signal == "consensus":
                 signal_ok = response.answer is not None and response.answer == cons_w.answer
             else:
                 signal_ok = correct
-            rep_update = tracker.update(response.node_id, signal_ok, alpha=alpha)
+            rep_update = tracker.update(
+                response.node_id, signal_ok, alpha=alpha, ground_truth=signal != "consensus",
+            )
         result.updates[response.node_id] = rep_update
 
         # Erros absoluto e relativo (observacionais, não usados no score).

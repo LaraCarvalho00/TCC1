@@ -29,6 +29,7 @@ Sinais de reputação (``signal``):
 """
 from __future__ import annotations
 
+import random
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
@@ -46,6 +47,7 @@ from .topology import node_sort_key
 SIGNALS = ("truth", "consensus", "hybrid")
 CONSENSUS_MODES = ("exact", "distance")
 MALICIOUS_STRATEGIES = ("always", "on_off")
+AUDIT_MODES = ("fixed", "random")
 
 # Motivos de recusa que qualquer nó consegue reproduzir a partir do registro.
 OBJECTIVE_REASONS = ("false_consensus", "forged")
@@ -68,6 +70,9 @@ class ProtocolConfig:
     consensus_mode: str = "exact"
     malicious_strategy: str = "always"
     honest_rounds: int = 5
+    audit_mode: str = "fixed"
+    audited_rounds: frozenset[int] = field(default_factory=frozenset)
+    alpha_up: float = 0.1
 
     def __post_init__(self) -> None:
         if self.signal not in SIGNALS:
@@ -76,6 +81,9 @@ class ProtocolConfig:
             raise ValueError(f"consensus_mode deve ser um de {CONSENSUS_MODES!r}.")
         if self.malicious_strategy not in MALICIOUS_STRATEGIES:
             raise ValueError(f"malicious_strategy deve ser um de {MALICIOUS_STRATEGIES!r}.")
+        if self.audit_mode not in AUDIT_MODES:
+            raise ValueError(f"audit_mode deve ser um de {AUDIT_MODES!r}.")
+        object.__setattr__(self, "audited_rounds", frozenset(self.audited_rounds))
 
     @property
     def consensus_alpha(self) -> Optional[float]:
@@ -115,7 +123,12 @@ class NetworkState:
     def _tracker(self) -> ReputationTracker:
         c = self.config
         return ReputationTracker(
-            self.node_ids, alpha=c.alpha, initial=c.initial, mechanism=c.mechanism, alpha_down=c.alpha_down,
+            self.node_ids,
+            alpha=c.alpha,
+            initial=c.initial,
+            mechanism=c.mechanism,
+            alpha_down=c.alpha_down,
+            alpha_up=c.alpha_up,
         )
 
     @property
@@ -160,8 +173,22 @@ def leaderless_calibration_round(round_index: int, config: ProtocolConfig) -> bo
     )
 
 
+def plan_audits(seed, n_rounds: int, test_every: int, probability: float) -> frozenset[int]:
+    """Rodadas 0-based auditadas. As de teste ficam de fora."""
+    rng = random.Random(f"{seed}:audit")
+    chosen = set()
+    for index in range(n_rounds):
+        if is_test_round(index, test_every):
+            continue
+        if rng.random() < probability:
+            chosen.add(index)
+    return frozenset(chosen)
+
+
 def oracle_round(round_index: int, config: ProtocolConfig) -> bool:
     """Indica se o juiz do experimento corrige esta rodada pelo gabarito."""
+    if config.audit_mode == "random":
+        return round_index in config.audited_rounds
     if config.signal == "consensus":
         return False
     if config.signal == "truth":
@@ -523,14 +550,14 @@ def apply_record(state: NetworkState, record: RoundRecord) -> None:
                         state.power.skip(nid)
                     continue
                 signal = 1.0 - relative_distance(answer, record.expected)
-                state.consensus.update(nid, signal, alpha=alpha)
+                state.consensus.update(nid, signal, alpha=alpha, ground_truth=True)
                 if state.split:
-                    state.power.update(nid, signal, alpha=alpha)
+                    state.power.update(nid, signal, alpha=alpha, ground_truth=True)
             else:
                 correct = answer is not None and normalize(answer) == normalize(record.expected)
-                state.consensus.update(nid, correct, alpha=alpha)
+                state.consensus.update(nid, correct, alpha=alpha, ground_truth=True)
                 if state.split:
-                    state.power.update(nid, correct, alpha=alpha)
+                    state.power.update(nid, correct, alpha=alpha, ground_truth=True)
 
 
 def replay(records: Iterable[RoundRecord], node_ids: Iterable[str], config: ProtocolConfig) -> NetworkState:

@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-MECHANISMS = ("ema", "ema_asymmetric", "beta")
+MECHANISMS = ("ema", "ema_asymmetric", "beta", "ema_slow_up")
 
 
 @dataclass
@@ -71,6 +71,7 @@ class ReputationTracker:
         initial: float = 0.5,
         mechanism: str = "ema",
         alpha_down: Optional[float] = None,
+        alpha_up: float = 0.1,
     ) -> None:
         if not 0.0 < alpha <= 1.0:
             raise ValueError("alpha deve estar em (0, 1].")
@@ -81,6 +82,8 @@ class ReputationTracker:
 
         self.alpha = alpha
         self.alpha_down: float = alpha_down if alpha_down is not None else alpha / 2.0
+        self._alpha_down_explicit = alpha_down is not None
+        self.alpha_up = alpha_up
         self.initial = initial
         self.mechanism = mechanism
 
@@ -94,7 +97,13 @@ class ReputationTracker:
         self._failures: dict[str, float] = {nid: 1.0 for nid in ids}
 
     # ------------------------------------------------------------------
-    def update(self, node_id: str, correct: bool | float, alpha: Optional[float] = None) -> ReputationUpdate:
+    def update(
+        self,
+        node_id: str,
+        correct: bool | float,
+        alpha: Optional[float] = None,
+        ground_truth: bool = False,
+    ) -> ReputationUpdate:
         """Atualiza a reputação do nó e retorna o registro estruturado.
 
         A fórmula e os pesos utilizados são registrados no objeto retornado,
@@ -119,6 +128,16 @@ class ReputationTracker:
         if self.mechanism == "ema":
             alpha_used = rate
             after = (1.0 - rate) * before + rate * s
+
+        elif self.mechanism == "ema_slow_up":
+            # Rodada comum: a mesma taxa única da EMA. Rodada com gabarito:
+            # sobe com alpha_up e desce com 0,8, salvo --alpha-down explícito.
+            if ground_truth:
+                down = self.alpha_down if self._alpha_down_explicit else 0.8
+                alpha_used = self.alpha_up if s >= before else down
+            else:
+                alpha_used = rate
+            after = (1.0 - alpha_used) * before + alpha_used * s
 
         elif self.mechanism == "ema_asymmetric":
             # Subida usa alpha completo; descida usa alpha_down (mais lenta).
@@ -189,7 +208,8 @@ class ReputationTracker:
             alpha=self.alpha,
             initial=self.initial,
             mechanism=self.mechanism,
-            alpha_down=self.alpha_down,
+            alpha_down=self.alpha_down if self._alpha_down_explicit else None,
+            alpha_up=self.alpha_up,
         )
         twin.restore(self.snapshot())
         twin.history = {nid: list(values) for nid, values in self.history.items()}

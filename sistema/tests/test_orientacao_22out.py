@@ -140,3 +140,26 @@ class StrategicMaliciousTest(unittest.TestCase):
         ]
         self.assertEqual(forged_early, [])
         self.assertTrue(forged_late)
+
+
+class AuditAndSlowUpTest(unittest.TestCase):
+    def test_random_audit_rate_and_test_rounds(self):
+        from sistema.core.protocol import plan_audits
+        from sistema.core.schedule import is_test_round
+
+        totals = []
+        for seed in range(1000):
+            chosen = plan_audits(seed, 50, 10, 0.1)
+            self.assertTrue(all(not is_test_round(index, 10) for index in chosen))
+            totals.append(len(chosen))
+        mean = sum(totals) / len(totals)
+        self.assertGreater(mean, 4)
+        self.assertLess(mean, 5)
+
+    def test_slow_up_rises_slowly_and_falls_fast(self):
+        risen = ReputationTracker(["n"], mechanism="ema_slow_up", initial=0.5)
+        risen.update("n", 1.0, ground_truth=True)
+        self.assertAlmostEqual(risen.get("n"), 0.55)
+        fallen = ReputationTracker(["n"], mechanism="ema_slow_up", initial=0.5)
+        fallen.update("n", 0.0, ground_truth=True)
+        self.assertAlmostEqual(fallen.get("n"), 0.1)

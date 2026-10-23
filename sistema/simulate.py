@@ -34,7 +34,15 @@ from .core.defenses import DefenseConfig, preset, preset_names
 from .core.engine import process_round
 from .core.metrics import MetricsLogger, dynamic_summary
 from .core.network import SimulatedNetwork, log_round
-from .core.protocol import CONSENSUS_MODES, MALICIOUS_STRATEGIES, SIGNALS, ProtocolConfig, oracle_round
+from .core.protocol import (
+    AUDIT_MODES,
+    CONSENSUS_MODES,
+    MALICIOUS_STRATEGIES,
+    SIGNALS,
+    ProtocolConfig,
+    oracle_round,
+    plan_audits,
+)
 from .core.reputation import MECHANISMS, ReputationTracker
 from .core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from .core.schemas import NodeResponse
@@ -104,12 +112,14 @@ def run_simulation(args: argparse.Namespace) -> dict:
     mechanism = getattr(args, "mechanism", "ema")
     alpha_down = getattr(args, "alpha_down", None)
     initial = getattr(args, "initial_reputation", 0.5)
+    alpha_up = float(getattr(args, "alpha_up", 0.1))
     tracker = ReputationTracker(
         node_ids,
         alpha=args.alpha,
         initial=initial,
         mechanism=mechanism,
         alpha_down=alpha_down,
+        alpha_up=alpha_up,
     )
 
     # Experiment ID e diretório de saída.
@@ -131,6 +141,12 @@ def run_simulation(args: argparse.Namespace) -> dict:
     orchestration = getattr(args, "orchestration", "fixed")
     signal = getattr(args, "signal", "truth")
     defense = defense_from_args(args)
+    audit_mode = getattr(args, "audit_mode", "fixed")
+    audited_rounds = (
+        plan_audits(args.seed, args.rounds, test_every, float(getattr(args, "audit_p", 0.1)))
+        if audit_mode == "random"
+        else frozenset()
+    )
     protocol = ProtocolConfig(
         signal=signal,
         alpha=args.alpha,
@@ -142,6 +158,9 @@ def run_simulation(args: argparse.Namespace) -> dict:
         consensus_mode=getattr(args, "consensus_mode", "exact"),
         malicious_strategy=getattr(args, "malicious_strategy", "always"),
         honest_rounds=int(getattr(args, "honest_rounds", 5)),
+        audit_mode=audit_mode,
+        audited_rounds=audited_rounds,
+        alpha_up=alpha_up,
     )
     network = None
     if orchestration == "dynamic":
@@ -291,6 +310,12 @@ def run_simulation(args: argparse.Namespace) -> dict:
             "unstable_honest": sum(profiles[n] == behavior.HONEST for n in unstable_nodes),
             "unstable_malicious": sum(profiles[n] == behavior.MALICIOUS for n in unstable_nodes),
         }
+    if audit_mode == "random":
+        extra = {
+            **(extra or {}),
+            "n_audited": len(audited_rounds),
+            "audited_rounds": sorted(audited_rounds),
+        }
     summary = logger.flush(
         run_config, tracker, profiles, seed=args.seed, extra=extra, final_reputations=final_reputations,
     )
@@ -436,7 +461,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--alpha-down", type=float, default=None, dest="alpha_down",
-        help="Alpha de descida para ema_asymmetric (padrão = alpha/2).",
+        help="Descida do ema_asymmetric (padrão alpha/2). No ema_slow_up, omissão vale 0,8.",
+    )
+    parser.add_argument(
+        "--alpha-up", type=float, default=0.1, dest="alpha_up",
+        help="Subida do ema_slow_up nas rodadas com gabarito.",
+    )
+    parser.add_argument(
+        "--audit-mode", choices=AUDIT_MODES, default="fixed", dest="audit_mode",
+        help="fixed = gabarito nas rodadas de teste; random = auditoria sorteada.",
+    )
+    parser.add_argument(
+        "--audit-p", type=float, default=0.1, dest="audit_p",
+        help="Probabilidade de auditar uma rodada que não é de teste.",
     )
     parser.add_argument(
         "--initial-reputation", type=float, default=0.5, dest="initial_reputation",
