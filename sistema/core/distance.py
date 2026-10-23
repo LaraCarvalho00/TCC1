@@ -26,6 +26,7 @@ def relative_distance(a: Optional[Answer], b: Optional[Answer]) -> float:
 
 
 DISTANCES = {"relative": relative_distance}
+CONSENSUS_CENTERS = ("medoid", "median", "mean")
 
 
 def medoid(
@@ -96,19 +97,109 @@ def plain_medoid(responses: Sequence[tuple[str, Optional[Answer]]]) -> Consensus
     return medoid([answer for _node, answer in responses])
 
 
+def _numeric_rows(
+    responses: Sequence[tuple[str, Optional[Answer]]],
+    reputations: Optional[dict[str, float]],
+) -> list[tuple[Answer, float]]:
+    """Respostas presentes, com peso 1 ou com reputação não negativa."""
+    rows = []
+    for node, answer in responses:
+        value = normalize(answer)
+        if value is None:
+            continue
+        if reputations is None:
+            weight = 1.0
+        else:
+            weight = max(0.0, float(reputations.get(node, 0.0)))
+        rows.append((value, weight))
+    return rows
+
+
+def _median_result(rows: Sequence[tuple[Answer, float]]) -> ConsensusResult:
+    """Primeira resposta, em ordem numérica, cuja soma acumulada chega à metade."""
+    if not rows:
+        return ConsensusResult(answer=None)
+    ordered = sorted(rows, key=lambda item: float(item[0]))
+    half = sum(weight for _value, weight in ordered) / 2.0
+    accumulated = 0.0
+    chosen = ordered[0][0]
+    for value, weight in ordered:
+        accumulated += weight
+        if accumulated >= half:
+            chosen = value
+            break
+    return ConsensusResult(answer=chosen)
+
+
+def _mean_result(rows: Sequence[tuple[Answer, float]]) -> ConsensusResult:
+    """Média ponderada. Sem peso positivo, a média simples das respostas."""
+    if not rows:
+        return ConsensusResult(answer=None)
+    total = sum(weight for _value, weight in rows)
+    if total == 0.0:
+        value = sum(float(answer) for answer, _weight in rows) / len(rows)
+    else:
+        value = sum(float(answer) * weight for answer, weight in rows) / total
+    return ConsensusResult(answer=normalize(value))
+
+
+def weighted_median(
+    responses: Sequence[tuple[str, Optional[Answer]]], reputations: dict[str, float],
+) -> ConsensusResult:
+    """Mediana numérica ponderada pela reputação. É sempre uma resposta recebida."""
+    return _median_result(_numeric_rows(responses, reputations))
+
+
+def plain_median(responses: Sequence[tuple[str, Optional[Answer]]]) -> ConsensusResult:
+    """Mediana numérica com todos os pesos iguais a 1."""
+    return _median_result(_numeric_rows(responses, None))
+
+
+def weighted_mean(
+    responses: Sequence[tuple[str, Optional[Answer]]], reputations: dict[str, float],
+) -> ConsensusResult:
+    """Média ponderada pela reputação."""
+    return _mean_result(_numeric_rows(responses, reputations))
+
+
+def plain_mean(responses: Sequence[tuple[str, Optional[Answer]]]) -> ConsensusResult:
+    """Média simples, a linha de base sem reputação."""
+    return _mean_result(_numeric_rows(responses, None))
+
+
 def choose_weighted(
     responses: Sequence[tuple[str, Optional[Answer]]],
     reputations: dict[str, float],
     mode: str,
+    center: str = "medoid",
 ) -> ConsensusResult:
-    """Consenso da rede. ``exact`` é o voto ponderado de hoje."""
+    """Consenso da rede. ``exact`` é o voto ponderado de hoje.
+
+    ``center`` só vale com ``mode="distance"``. O padrão é o medoide.
+    """
     if mode == "distance":
+        if center == "median":
+            return weighted_median(responses, reputations)
+        if center == "mean":
+            return weighted_mean(responses, reputations)
+        if center != "medoid":
+            raise ValueError(f"consensus_center deve ser um de {CONSENSUS_CENTERS!r}.")
         return weighted_medoid(responses, reputations)
     return weighted_consensus(responses, reputations)
 
 
-def choose_baseline(responses: Sequence[tuple[str, Optional[Answer]]], mode: str) -> ConsensusResult:
+def choose_baseline(
+    responses: Sequence[tuple[str, Optional[Answer]]],
+    mode: str,
+    center: str = "medoid",
+) -> ConsensusResult:
     """Linha de base sem reputação. ``exact`` é a maioria simples."""
     if mode == "distance":
+        if center == "median":
+            return plain_median(responses)
+        if center == "mean":
+            return plain_mean(responses)
+        if center != "medoid":
+            raise ValueError(f"consensus_center deve ser um de {CONSENSUS_CENTERS!r}.")
         return plain_medoid(responses)
     return majority_consensus(responses)

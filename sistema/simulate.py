@@ -36,6 +36,7 @@ from .core.metrics import MetricsLogger, dynamic_summary
 from .core.network import SimulatedNetwork, log_round
 from .core.protocol import (
     AUDIT_MODES,
+    CONSENSUS_CENTERS,
     CONSENSUS_MODES,
     MALICIOUS_STRATEGIES,
     SIGNALS,
@@ -175,6 +176,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
         audited_rounds=audited_rounds,
         alpha_up=alpha_up,
         validation_score=getattr(args, "validation_score", "graded"),
+        consensus_center=getattr(args, "consensus_center", "medoid"),
     )
     network = None
     if orchestration == "dynamic":
@@ -273,6 +275,7 @@ def run_simulation(args: argparse.Namespace) -> dict:
                 consensus_mode=protocol.consensus_mode,
                 audited=oracle_round(round_index, protocol),
                 calibration=this_is_calibration,
+                consensus_center=protocol.consensus_center,
             )
     except BaseException:
         logger.close()
@@ -388,6 +391,7 @@ def _dynamic_round(
         initial=initial,
         is_test=is_test,
         consensus_mode=network.config.consensus_mode,
+        consensus_center=network.config.consensus_center,
         audited=oracle_round(round_index, network.config),
         calibration=(
             network.config.signal != "consensus"
@@ -471,6 +475,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--validation-score", choices=VALIDATION_SCORES, default="graded", dest="validation_score",
         help="graded = 1 − distância no gabarito; exact = 1 só se a resposta for igual.",
+    )
+    parser.add_argument(
+        "--consensus-center", choices=CONSENSUS_CENTERS, default="medoid", dest="consensus_center",
+        help="Centro no modo de distância: medoid, median ou mean. Padrão medoid.",
     )
     parser.add_argument(
         "--malicious-strategy", choices=MALICIOUS_STRATEGIES, default="always", dest="malicious_strategy",

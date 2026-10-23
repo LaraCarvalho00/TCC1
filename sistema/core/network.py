@@ -187,7 +187,9 @@ class SimulatedNetwork:
             attack=attack,
             colluders=colluders,
         )
-        cons = choose_weighted(list(record.responses), state.consensus.weights(), cfg.consensus_mode)
+        cons = choose_weighted(
+            list(record.responses), state.consensus.weights(), cfg.consensus_mode, cfg.consensus_center,
+        )
 
         objective = objective_check(state, record)
         votes: dict[str, Vote] = {}
@@ -270,7 +272,10 @@ class SimulatedNetwork:
         reached = [m for m in members if m in dist]
         hops = max((dist[m] for m in reached), default=0)
         responses = {m: answers.get(m) for m in reached}
-        cons = choose_weighted(list(responses.items()), state.consensus.weights(), self.config.consensus_mode)
+        cons = choose_weighted(
+            list(responses.items()), state.consensus.weights(),
+            self.config.consensus_mode, self.config.consensus_center,
+        )
 
         record = calibration_record(
             prev_hash=group.ledger.head,
@@ -404,6 +409,7 @@ def log_round(
     consensus_mode: str = "exact",
     audited: bool = False,
     calibration: bool = False,
+    consensus_center: str = "medoid",
 ) -> None:
     """Grava ``per_node.csv``, ``rounds.csv`` e ``leadership.csv`` da rodada.
 
@@ -425,7 +431,9 @@ def log_round(
     reference_consensus = committed.get(anchor) if anchor else None
     reference = next((o for o in outcomes if o.is_reference), outcomes[0] if outcomes else None)
 
-    cons_m = choose_baseline([(r.node_id, r.answer) for r in responses], consensus_mode)
+    cons_m = choose_baseline(
+        [(r.node_id, r.answer) for r in responses], consensus_mode, consensus_center,
+    )
     result = RoundResult(
         round_index=round_index,
         task_id=task_id,

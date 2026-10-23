@@ -2,12 +2,14 @@
 import csv
 import os
 import random
+import tempfile
 import unittest
 
 from sistema.core.behavior import corrupt_relative, corrupt_with_noise
 from sistema.core.defenses import DefenseConfig
-from sistema.core.distance import medoid, relative_distance
-from sistema.core.protocol import NetworkState, ProtocolConfig, apply_record, oracle_record
+from sistema.core.distance import choose_baseline, choose_weighted, medoid, relative_distance
+from sistema.core.metrics import MetricsLogger
+from sistema.core.protocol import NetworkState, ProtocolConfig, apply_record, compute_round, oracle_record
 from sistema.core.reputation import ReputationTracker
 from sistema.simulate import run_simulation
 from sistema.tests.test_network import _args
@@ -296,3 +298,59 @@ class NoOracleAccuracyTest(unittest.TestCase):
             seed=1,
         ))
         self.assertEqual(summary["n_rounds_no_oracle"], 50)
+
+
+class ConsensusCenterTest(unittest.TestCase):
+    def test_equal_weights_medoid_median_and_mean(self):
+        pairs = [("a", 18), ("b", 18), ("c", 20), ("d", 999)]
+        weights = {node: 1.0 for node, _answer in pairs}
+        self.assertEqual(choose_weighted(pairs, weights, "distance", "medoid").answer, 18)
+        self.assertEqual(choose_weighted(pairs, weights, "distance", "median").answer, 18)
+        self.assertEqual(choose_weighted(pairs, weights, "distance", "mean").answer, 263.75)
+        self.assertEqual(choose_baseline(pairs, "distance", "medoid").answer, 18)
+        self.assertEqual(choose_baseline(pairs, "distance", "median").answer, 18)
+        self.assertEqual(choose_baseline(pairs, "distance", "mean").answer, 263.75)
+
+    def test_reputation_pulls_the_mean_toward_the_cluster(self):
+        pairs = [("a", 18), ("b", 18), ("c", 20), ("d", 999)]
+        weights = {"a": 1.0, "b": 1.0, "c": 1.0, "d": 0.01}
+        mean = choose_weighted(pairs, weights, "distance", "mean").answer
+        self.assertGreater(mean, 18)
+        self.assertLess(mean, 30)
+
+    def test_exact_mode_ignores_the_center(self):
+        pairs = [("a", 18), ("b", 20)]
+        weights = {"a": 1.0, "b": 1.0}
+        self.assertEqual(
+            choose_weighted(pairs, weights, "exact", "mean").answer,
+            choose_weighted(pairs, weights, "exact").answer,
+        )
+
+    def test_compute_round_uses_the_configured_center(self):
+        config = ProtocolConfig(consensus_mode="distance", consensus_center="mean", signal="consensus")
+        state = NetworkState(["a", "b", "c", "d"], config)
+        result, reference, _snapshot, _updates = compute_round(
+            state, {"a": 18, "b": 18, "c": 20, "d": 999},
+        )
+        self.assertEqual(result.answer, 263.75)
+        self.assertEqual(reference, 263.75)
+
+    def test_mean_distance_skips_oracle_rounds(self):
+        logger = MetricsLogger(tempfile.mkdtemp(), "centro", overwrite=True, row_sync=False)
+        try:
+            logger.round_rows = [
+                {
+                    "is_test": 0, "audited": 0, "calibration": 0,
+                    "consensus_correct": 0, "majority_correct": 0,
+                    "consensus_weighted": 20, "expected": 18, "pct_honest_exact": "",
+                },
+                {
+                    "is_test": 0, "audited": 1, "calibration": 0,
+                    "consensus_correct": 0, "majority_correct": 0,
+                    "consensus_weighted": 999, "expected": 18, "pct_honest_exact": "",
+                },
+            ]
+            summary = logger.summary({}, {})
+        finally:
+            logger.close()
+        self.assertEqual(summary["mean_distance_to_truth_no_oracle"], round(2 / 38, 6))

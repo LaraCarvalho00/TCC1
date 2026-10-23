@@ -380,7 +380,8 @@ async def lead(message: TaskMessage) -> dict:
         attack=attack, colluders=COLLUDERS,
     )
     cons = choose_weighted(
-        list(record.responses), replica.state.consensus.weights(), replica.state.config.consensus_mode,
+        list(record.responses), replica.state.consensus.weights(),
+        replica.state.config.consensus_mode, replica.state.config.consensus_center,
     )
 
     proposal = RecordMessage(round_index=message.round_index, head=head, record=record.to_json())

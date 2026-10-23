@@ -38,7 +38,7 @@ from .answer import Answer, normalize
 from .behavior import AUDITOR_ATTACKS, LEADER_ATTACKS  # noqa: F401 (reexportados)
 from .consensus import ConsensusResult
 from .defenses import DefenseConfig
-from .distance import choose_weighted, relative_distance
+from .distance import CONSENSUS_CENTERS, choose_weighted, relative_distance
 from .ledger import RoundRecord, canonical_hash
 from .reputation import ReputationTracker, ReputationUpdate
 from .schedule import DEFAULT_TEST_EVERY, is_test_round
@@ -75,6 +75,7 @@ class ProtocolConfig:
     audited_rounds: frozenset[int] = field(default_factory=frozenset)
     alpha_up: float = 0.1
     validation_score: str = "graded"
+    consensus_center: str = "medoid"
 
     def __post_init__(self) -> None:
         if self.signal not in SIGNALS:
@@ -87,6 +88,8 @@ class ProtocolConfig:
             raise ValueError(f"audit_mode deve ser um de {AUDIT_MODES!r}.")
         if self.validation_score not in VALIDATION_SCORES:
             raise ValueError(f"validation_score deve ser um de {VALIDATION_SCORES!r}.")
+        if self.consensus_center not in CONSENSUS_CENTERS:
+            raise ValueError(f"consensus_center deve ser um de {CONSENSUS_CENTERS!r}.")
         object.__setattr__(self, "audited_rounds", frozenset(self.audited_rounds))
 
     @property
@@ -241,7 +244,7 @@ def compute_round(
     """
     pairs = _pairs(responses)
     mode = state.config.consensus_mode
-    result = choose_weighted(pairs, state.consensus.weights(), mode)
+    result = choose_weighted(pairs, state.consensus.weights(), mode, state.config.consensus_center)
     reference = result.answer if consensus == "auto" else normalize(consensus)
     after = state.clone()
     updates: dict[str, ReputationUpdate] = {}

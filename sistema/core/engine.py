@@ -47,6 +47,7 @@ def process_round(
     consensus_mode: str = "exact",
     audited: bool = False,
     calibration: bool = False,
+    consensus_center: str = "medoid",
 ) -> RoundResult:
     """Processa uma rodada completa após a coleta de respostas.
 
@@ -93,8 +94,8 @@ def process_round(
 
     # 2. Consenso. ``exact`` mantém o voto ponderado e a maioria simples.
     pairs = [(r.node_id, r.answer) for r in responses]
-    cons_w = choose_weighted(pairs, weights_before, consensus_mode)
-    cons_m = choose_baseline(pairs, consensus_mode)
+    cons_w = choose_weighted(pairs, weights_before, consensus_mode, consensus_center)
+    cons_m = choose_baseline(pairs, consensus_mode, consensus_center)
 
     # 3. RoundResult.
     result = RoundResult(

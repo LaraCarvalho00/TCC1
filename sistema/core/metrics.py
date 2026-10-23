@@ -34,6 +34,7 @@ import statistics
 import subprocess
 from typing import TYPE_CHECKING, Optional
 
+from .distance import relative_distance
 from .schemas import RoundResult
 
 if TYPE_CHECKING:
@@ -375,6 +376,10 @@ class MetricsLogger:
         ]
         no_oracle_weighted = sum(int(r["consensus_correct"]) for r in no_oracle)
         no_oracle_majority = sum(int(r["majority_correct"]) for r in no_oracle)
+        no_oracle_distances = [
+            relative_distance(_stored_answer(r.get("consensus_weighted")), _stored_answer(r.get("expected")))
+            for r in no_oracle
+        ]
         latencies = [r["latency_ms"] for r in self.per_node_rows if r["answered"]]
 
         # Reputação final por perfil (instantâneo)
@@ -408,6 +413,9 @@ class MetricsLogger:
             "consensus_accuracy_weighted_no_oracle": _ratio(no_oracle_weighted, len(no_oracle)),
             "consensus_accuracy_majority_no_oracle": _ratio(no_oracle_majority, len(no_oracle)),
             "n_rounds_no_oracle": len(no_oracle),
+            "mean_distance_to_truth_no_oracle": (
+                round(statistics.mean(no_oracle_distances), 6) if no_oracle_distances else None
+            ),
             "tests": [
                 {
                     "round": int(r["test_round"]),
@@ -641,6 +649,21 @@ def _mean_honest_exact(rows: list[dict]):
 
 def _ratio(part: int, total: int) -> float:
     return round(part / total, 4) if total else 0.0
+
+
+def _stored_answer(value):
+    """Valor gravado na linha da rodada. Vazio conta como resposta ausente."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(number) if number.is_integer() else number
 
 
 def _write_manifest(
