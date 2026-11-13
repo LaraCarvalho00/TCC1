@@ -20,3 +20,8 @@ env/
 *.safetensors
 *.bin
 .cache/
+
+# Saídas experimentais geradas
+sistema/resultados/
+entrega_a4/*.csv
+entrega_a4/figuras/

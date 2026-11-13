@@ -1,5 +1,0 @@
-branch: a4-dados
-commit_dos_dados: 34088418e2b7d807b6d0467ad2873ab2475add09
-base: 44190e7288cedc7d0d05313c3da555412763bc37
-remoto: https://github.com/LaraCarvalho00/TCC1.git
-push: aceito, branch a4-dados

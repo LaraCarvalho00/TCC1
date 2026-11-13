@@ -1,23 +1,30 @@
-# Simulação de Rede Distribuída para Inferência de IA com Avaliação de Confiabilidade baseada em Reputação
+# TCC — Código do simulador distribuído
 
-## 👥 Equipe
-* **Discentes:** Allan Mateus Arruda De Souza e Lara Andrade Carvalho
-* **Orientadores:** Prof. Danilo Maia e Prof. Leonardo Vilela Cardoso
-* **Instituição:** PUC Minas - Engenharia de Software
+Esta branch reúne o código da simulação, dos nós em contêineres, dos experimentos e dos testes. O artigo e os resultados históricos estão na branch `a4-orientacao-22out`.
 
-## 🎯 Resumo da Proposta
-Este trabalho de conclusão de curso (TCC) consiste em uma pesquisa experimental fundamentada na simulação de arquiteturas distribuídas para a execução de tarefas de Inteligência Artificial. O foco central é investigar como mecanismos de reputação e consenso podem mitigar o impacto de nós maliciosos ou instáveis em redes descentralizadas.
+## Estrutura
 
-## 🔍 Problema de Pesquisa
-Atualmente, a inferência de IA é predominantemente centralizada em data centers. A transição para redes distribuídas introduz o desafio da confiabilidade: como garantir a integridade dos resultados em um ambiente onde os participantes (nós) podem retornar respostas incorretas, inconsistentes ou maliciosas?
+- `sistema/core/`: consenso, reputação, rede e protocolo.
+- `sistema/node/` e `sistema/orchestrator/`: serviços para execução em contêineres.
+- `sistema/config/`, `docker-compose*.yml`: configurações de execução.
+- `sistema/scripts/`, `entrega_a4/`: scripts de experimentos e análise.
+- `sistema/tests/`: testes automatizados e dados de teste.
 
-## 🛠️ Materiais e Métodos
-A pesquisa utiliza uma abordagem quantitativa e experimental baseada em:
-* **Simulação via Containers:** Uso de Docker para representar nós independentes e isolados.
-* **Algoritmos de Reputação:** Implementação de lógica para pontuação e penalização de nós.
-* **Linguagem:** Python para a lógica de coordenação e coleta de métricas.
+Os arquivos JSON de amostra e o banco de respostas são entradas usadas pelo código. Resultados gerados não são parte desta branch. Alguns scripts de análise de entregas antigas dependem desses resultados históricos; consulte a branch original para recuperá-los.
 
-## 📂 Estrutura do Repitório
-* `/Divulgação/Apresentação`: 
-* `/Documentação`: 
-* `/Artigos`: 
+## Execução
+
+Na raiz do repositório, com Python instalado:
+
+```sh
+python -m sistema.simulate --nodes 4 --malicious 0.25 --rounds 20
+python -m unittest discover -s sistema/tests -t .
+```
+
+Para iniciar a configuração Docker padrão, com Docker Compose instalado:
+
+```sh
+docker compose up --build
+```
+
+As dependências opcionais estão nos arquivos `sistema/requirements*.txt`. Modelos e datasets externos exigem instalação e recursos adicionais.
