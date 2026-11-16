@@ -1,0 +1,8 @@
+aws_region        = "us-east-1"
+project_name      = "distributed-ai"
+github_repository = "allansouzaallu/TCC1"
+github_branch     = "sistema-ia-distribuida"
+github_default_branch = "main"
+# Se a conta já tiver o provider OIDC do GitHub, informe o ARN para reutilizá-lo.
+# existing_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+results_retention_days = 90

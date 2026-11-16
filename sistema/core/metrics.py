@@ -174,6 +174,7 @@ class MetricsLogger:
         experiment_id: Optional[str] = None,
         overwrite: bool = False,
         row_sync: bool = True,
+        git_sha: Optional[str] = None,
     ) -> None:
         if not overwrite and os.path.exists(output_dir):
             raise FileExistsError(
@@ -182,6 +183,7 @@ class MetricsLogger:
             )
         os.makedirs(output_dir, exist_ok=True)
         self.output_dir = output_dir
+        self.git_sha = git_sha
         self.experiment_id = experiment_id or _generate_id()
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
@@ -472,6 +474,7 @@ class MetricsLogger:
             alpha=tracker.alpha,
             alpha_down=tracker.alpha_down,
             initial=tracker.initial,
+            git_sha_override=self.git_sha,
         )
         return summ
 
@@ -676,8 +679,9 @@ def _write_manifest(
     alpha: float,
     alpha_down: float,
     initial: float,
+    git_sha_override: Optional[str] = None,
 ) -> None:
-    git_sha = _git_sha()
+    git_sha = _git_sha() if git_sha_override is None else git_sha_override
     manifest = {
         "experiment_id": experiment_id,
         "created_at": datetime.datetime.now().isoformat(),

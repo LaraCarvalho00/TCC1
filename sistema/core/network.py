@@ -22,7 +22,7 @@ from . import behavior
 from .answer import Answer
 from .distance import choose_baseline, choose_weighted
 from .election import elect_leader, pick_auditor
-from .ledger import Ledger, RoundRecord
+from .ledger import Ledger, RoundRecord, canonical_hash
 from .protocol import (
     Decision,
     NetworkState,
@@ -34,12 +34,12 @@ from .protocol import (
     leaderless_calibration_round,
     malicious_acts_honest,
     objective_check,
+    _verify_record_in_group,
     oracle_record,
     oracle_round,
     outcome_records,
     propose_record,
     tally_quorum,
-    verify_record,
 )
 from .protocol import refusers as protocol_refusers
 from .topology import Graph, distances, node_sort_key
@@ -192,9 +192,12 @@ class SimulatedNetwork:
         )
 
         objective = objective_check(state, record)
+        hash_valid = record.prev_hash == prev and record.hash == canonical_hash(record.content())
+        response_map = record.responses_map() if hash_valid else {}
         votes: dict[str, Vote] = {}
         for node in reached:
-            honest = verify_record(state, record, node_id=node, own_answer=answers.get(node), prev_hash=prev, objective=objective)
+            honest = _verify_record_in_group(state, record, node_id=node, own_answer=answers.get(node), prev_hash=prev,
+                                             objective=objective, hash_valid=hash_valid, responses=response_map)
             if self.malicious(node) and not self._laying_low(round_index):
                 ok, reason = behavior.malicious_vote(
                     leader_is_colluder=self.malicious(leader),

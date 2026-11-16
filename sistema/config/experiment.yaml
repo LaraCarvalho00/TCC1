@@ -1,54 +1,36 @@
-# Configuração do experimento (orquestrador fixo, rede bem conectada).
-#
-# mode: "simulation" -> nós recebem o gabarito e fabricam o comportamento do
-#                       perfil (valida comunicação e reputação sem modelo).
-#       "real"       -> nós NÃO recebem o gabarito; nós honestos executam o LLM.
 mode: simulation
-
-# Fonte das tarefas: "sample" (amostra offline embutida) ou "gsm8k" (download).
 dataset: sample
-num_tasks: 10          # limita o nº de tarefas carregadas (null = todas)
-split: test            # usado apenas quando dataset = gsm8k
-
-rounds: 20             # nº de rodadas (null = uma por tarefa)
-test_every: 10         # uma rodada de teste a cada 10 rodadas (10, 20, …)
-alpha: 0.3             # taxa de aprendizado da reputação (EMA)
-timeout_s: 10          # tempo máximo de espera por nó (detecta instabilidade)
+num_tasks: 10
+split: test
+rounds: 20
+alpha: 0.3
+timeout_s: 60.0
 output_dir: sistema/results/experimento
-
-# ------------------------------------------------------------------
-# Mecanismo de reputação
-# Opções: ema | ema_asymmetric | beta
-# ------------------------------------------------------------------
+seed: 10
 reputation_mechanism: ema
-# alpha_down: 0.15   # apenas para ema_asymmetric; padrão = alpha/2
 initial_reputation: 0.5
-
-# Experiment tracking
-experiment_id: null   # null = auto-gerado (timestamp)
-seed: 42
-
-# ------------------------------------------------------------------
-# Comportamento dos nós em modo simulação
-# ------------------------------------------------------------------
-honest_p_correct: 0.9        # probabilidade de acerto de um nó honesto
-unstable_p_drop: 0.3         # probabilidade de o nó instável descartar
-unstable_p_correct: 0.5      # probabilidade de acerto quando responde (instável)
-# collusion_value: null      # se definido, maliciosos respondem este valor
-
-# ------------------------------------------------------------------
-# Topologia: cenário inicial (4 nós, 25% maliciosos)
-# ------------------------------------------------------------------
+honest_p_correct: 0.9
+unstable_p_drop: 0.3
+unstable_p_correct: 0.5
+collusion_value: 999
+test_every: 10
 nodes:
-  - id: node-0
-    url: http://node-0:8000
-    profile: honest
-  - id: node-1
-    url: http://node-1:8000
-    profile: honest
-  - id: node-2
-    url: http://node-2:8000
-    profile: honest
-  - id: node-3
-    url: http://node-3:8000
-    profile: malicious
+- id: node-0
+  url: http://node-0:8000
+  profile: malicious
+- id: node-1
+  url: http://node-1:8000
+  profile: honest
+- id: node-2
+  url: http://node-2:8000
+  profile: honest
+- id: node-3
+  url: http://node-3:8000
+  profile: honest
+orchestration: dynamic
+signal: hybrid
+topology: kregular
+degree: 2
+defense: all
+leader_attack: none
+auditor_attack: none

@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 \
+    TOKENIZERS_PARALLELISM=false \
+    OMP_NUM_THREADS=1
+
+COPY sistema/requirements-node.txt ./requirements-node.txt
+COPY sistema/node/requirements-dedicated.txt ./requirements-dedicated.txt
+RUN pip install --no-cache-dir torch==2.7.1 --index-url https://download.pytorch.org/whl/cu126 \
+    && pip install --no-cache-dir -r requirements-node.txt -r requirements-dedicated.txt
+COPY sistema/ ./sistema/
+EXPOSE 8000
+# A single application worker owns a single resident model.
+CMD ["uvicorn", "sistema.node.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

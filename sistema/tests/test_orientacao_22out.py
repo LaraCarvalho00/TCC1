@@ -81,7 +81,7 @@ class NoiseAnswerTest(unittest.TestCase):
     def _answers(self, collusion):
         args = _args(
             nodes=10, malicious=0.5, rounds=2, seed=7,
-            collusion_value=collusion, malicious_answer="noise", orchestration="fixed",
+            collusion_value=collusion, malicious_answer="noise", orchestration="dynamic",
         )
         run_simulation(args)
         with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
@@ -116,7 +116,7 @@ class RelativeNoiseTest(unittest.TestCase):
         args = _args(
             nodes=10, malicious=0.5, rounds=2, seed=7,
             collusion_value=999, malicious_answer="noise", noise_mode="relative",
-            noise_distance=0.2, orchestration="fixed",
+            noise_distance=0.2, orchestration="dynamic",
         )
         run_simulation(args)
         with open(os.path.join(args.output, "per_node.csv"), newline="") as handle:
@@ -132,7 +132,7 @@ class UnstableAttributeTest(unittest.TestCase):
     def test_twenty_percent_marks_ten_nodes(self):
         summary = run_simulation(_args(
             nodes=50, malicious=0.0, unstable=0.2, unstable_mode="attribute",
-            rounds=1, orchestration="fixed", signal="truth", seed=3,
+            rounds=1, orchestration="dynamic", signal="truth", seed=3,
         ))
         self.assertEqual(summary["unstable_honest"] + summary["unstable_malicious"], 10)
         self.assertEqual(summary["unstable_malicious"], 0)
@@ -140,14 +140,14 @@ class UnstableAttributeTest(unittest.TestCase):
     def test_high_malicious_fraction_is_accepted(self):
         summary = run_simulation(_args(
             nodes=50, malicious=0.8, unstable=0.2, unstable_mode="attribute",
-            rounds=1, orchestration="fixed", signal="truth", seed=3,
+            rounds=1, orchestration="dynamic", signal="truth", seed=3,
         ))
         self.assertEqual(summary["unstable_honest"] + summary["unstable_malicious"], 10)
 
     def test_honest_unstable_answers_honestly(self):
         args = _args(
             nodes=50, malicious=0.0, unstable=0.2, unstable_mode="attribute",
-            rounds=1, orchestration="fixed", signal="truth", seed=3,
+            rounds=1, orchestration="dynamic", signal="truth", seed=3,
             honest_accuracy=1.0, unstable_p_drop=0.0,
         )
         run_simulation(args)
@@ -213,7 +213,7 @@ class AuditAndSlowUpTest(unittest.TestCase):
 class RequestedMeasuresTest(unittest.TestCase):
     def test_honest_fraction_and_audit_column(self):
         args = _args(
-            nodes=10, malicious=0.0, rounds=1, orchestration="fixed", signal="truth",
+            nodes=10, malicious=0.0, rounds=1, orchestration="dynamic", signal="truth",
             honest_accuracy=1.0, seed=1,
         )
         summary = run_simulation(args)
@@ -243,7 +243,7 @@ class KnowsScheduleTest(unittest.TestCase):
     def test_fixed_calendar_honest_on_predictable_rounds(self):
         honest_idx = {0, 1, 2, 3, 4, 9, 19, 29, 39, 49}
         args = _args(
-            nodes=10, malicious=0.4, rounds=50, seed=2, orchestration="fixed",
+            nodes=10, malicious=0.4, rounds=50, seed=2, orchestration="dynamic",
             signal="hybrid", audit_mode="fixed", malicious_strategy="knows_schedule",
             honest_rounds=5, collusion_value=999, defense="none",
         )
@@ -263,7 +263,7 @@ class KnowsScheduleTest(unittest.TestCase):
     def test_random_audit_does_not_change_malicious_answers(self):
         def answers(audited):
             args = _args(
-                nodes=8, malicious=0.5, rounds=20, seed=4, orchestration="fixed",
+                nodes=8, malicious=0.5, rounds=20, seed=4, orchestration="dynamic",
                 signal="consensus", audit_mode="random", malicious_strategy="knows_schedule",
                 honest_rounds=5, collusion_value=999, defense="none",
                 audited_rounds_override=audited,
@@ -287,14 +287,14 @@ class KnowsScheduleTest(unittest.TestCase):
 class NoOracleAccuracyTest(unittest.TestCase):
     def test_hybrid_with_three_calibration_rounds_leaves_42(self):
         summary = run_simulation(_args(
-            nodes=4, malicious=0.0, rounds=50, orchestration="fixed", signal="hybrid",
+            nodes=4, malicious=0.0, rounds=50, orchestration="dynamic", signal="hybrid",
             calibration_rounds=3, defense="none", seed=1,
         ))
         self.assertEqual(summary["n_rounds_no_oracle"], 42)
 
     def test_consensus_signal_counts_every_round(self):
         summary = run_simulation(_args(
-            nodes=4, malicious=0.0, rounds=50, orchestration="fixed", signal="consensus",
+            nodes=4, malicious=0.0, rounds=50, orchestration="dynamic", signal="consensus",
             seed=1,
         ))
         self.assertEqual(summary["n_rounds_no_oracle"], 50)

@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import tempfile
 import unittest
@@ -9,9 +8,6 @@ from sistema.core.network import SimulatedNetwork
 from sistema.core.protocol import ProtocolConfig
 from sistema.core.topology import build_graph
 from sistema.simulate import run_simulation
-
-_GOLDEN = os.path.join(os.path.dirname(__file__), "data", "golden_fixed.json")
-
 
 def _args(**overrides):
     base = dict(
@@ -30,18 +26,12 @@ def _run(**overrides):
     return run_simulation(_args(**overrides))
 
 
-class FixedRegressionTest(unittest.TestCase):
-    """O orquestrador fixo reproduz os números de antes do orquestrador eleito."""
-
-    def test_fixed_mode_matches_golden(self):
-        with open(_GOLDEN, encoding="utf-8") as fh:
-            golden = json.load(fh)
-        for case in golden:
-            scenario = case["scenario"]
-            summary = _run(orchestration="fixed", signal="truth", seed=7, topology="star", **scenario)
-            for key, value in case["summary"].items():
-                self.assertEqual(summary[key], value, f"{scenario} {key}")
-            self.assertNotIn("dynamic", summary)
+class OrchestrationSelectionTest(unittest.TestCase):
+    def test_rejects_fixed_without_writing_results(self):
+        args = _args(orchestration="fixed")
+        with self.assertRaisesRegex(ValueError, "apenas orquestração dynamic"):
+            run_simulation(args)
+        self.assertEqual(os.listdir(args.output), [])
 
 
 class DynamicNetworkTest(unittest.TestCase):

@@ -40,8 +40,9 @@ class ModelBackend:
         model_name: str,
         device: Optional[str] = None,
         max_new_tokens: int = 256,
+        quantization: Optional[str] = None,
     ) -> None:
-        from transformers import AutoModelForCausalLM, AutoTokenizer  # import tardio
+        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig  # import tardio
         import torch
 
         self.model_name = model_name
@@ -56,10 +57,17 @@ class ModelBackend:
             self.device = "cpu"
         dtype = torch.float16 if self.device in ("cuda", "mps") else torch.float32
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=dtype,
-        ).to(self.device)
+        if quantization == "nf4":
+            if self.device != "cuda":
+                raise ValueError("A quantização NF4 requer CUDA neste modo.")
+            config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=dtype, quantization_config=config, device_map={"": 0})
+        elif quantization is None:
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype).to(self.device)
+        else:
+            raise ValueError(f"Quantização desconhecida: {quantization!r}")
 
     def solve(self, question: str) -> Optional[Answer]:
         import torch

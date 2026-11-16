@@ -18,6 +18,7 @@ massa de reputação vence o protocolo:
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+import math
 
 MEASURES = ("calibration", "oracle_bypass", "split_alpha", "split_scores", "refuse_forged")
 DEFAULT_CALIBRATION_ROUNDS = 3
@@ -91,3 +92,30 @@ def preset(name: str) -> DefenseConfig:
 def preset_names() -> list[str]:
     """Todos os presets da ablação, na ordem usada nos gráficos."""
     return ["none", *MEASURES, "all", *(f"all_minus_{m}" for m in MEASURES)]
+
+
+def with_overrides(config: DefenseConfig, *, calibration_rounds=None, consensus_alpha=None, oracle_alpha=None) -> DefenseConfig:
+    """Aplica os parâmetros validados de defesa em todos os nós."""
+    updates = {}
+    if calibration_rounds is not None:
+        try:
+            if isinstance(calibration_rounds, bool):
+                raise ValueError
+            converted = int(calibration_rounds)
+            if converted < 0 or str(converted) != str(calibration_rounds).strip():
+                raise ValueError
+        except (TypeError, ValueError) as exc:
+            raise ValueError("calibration_rounds deve ser um inteiro não negativo") from exc
+        updates["calibration_rounds"] = converted
+    for name, value in (("consensus_alpha", consensus_alpha), ("oracle_alpha", oracle_alpha)):
+        if value is not None:
+            try:
+                if isinstance(value, bool):
+                    raise ValueError
+                number = float(value)
+                if not math.isfinite(number) or not 0 <= number <= 1:
+                    raise ValueError
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{name} deve estar entre 0 e 1") from exc
+            updates[name] = number
+    return replace(config, **updates)

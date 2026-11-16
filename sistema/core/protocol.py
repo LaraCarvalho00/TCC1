@@ -22,7 +22,7 @@ Fluxo de uma rodada:
 Sinais de reputação (``signal``):
 
 * ``truth``     : só o gabarito atualiza a reputação, em toda rodada (equivale
-                  ao orquestrador fixo de hoje).
+                  à configuração anterior de referência).
 * ``consensus`` : só a concordância com o consenso aceito (sem juiz).
 * ``hybrid``    : consenso nas rodadas normais; gabarito na calibração e nos
                   testes.
@@ -369,12 +369,22 @@ def verify_record(
     ``objective`` pode ser passado já calculado (é o mesmo para todos os nós
     com o mesmo estado).
     """
+    return _verify_record_in_group(state, record, node_id=node_id, own_answer=own_answer,
+                                   prev_hash=prev_hash, objective=objective)
+
+
+def _verify_record_in_group(state, record, *, node_id, own_answer, prev_hash, objective, hash_valid=None, responses=None):
+    """Verifica o voto, com pré-cálculos opcionais de uma proposta na simulação."""
     if record.prev_hash != prev_hash:
         return Vote(node_id, False, "chain")
-    if record.hash != canonical_hash(record.content()):
+    if hash_valid is None:
+        hash_valid = record.hash == canonical_hash(record.content())
+    if not hash_valid:
         return Vote(node_id, False, "hash")
     if own_answer is not None:
-        listed = record.responses_map().get(node_id, _MISSING)
+        if responses is None:
+            responses = record.responses_map()
+        listed = responses.get(node_id, _MISSING)
         if listed is _MISSING or normalize(listed) != normalize(own_answer):
             return Vote(node_id, False, "censored")
     reason = objective_check(state, record) if objective is None else objective

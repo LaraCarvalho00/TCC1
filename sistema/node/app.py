@@ -29,8 +29,11 @@ mantendo o servidor responsivo (coleta assíncrona pelo orquestrador).
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
+import hashlib
 import os
 import random
+import threading
 import time
 from typing import Optional
 
@@ -41,12 +44,13 @@ from pydantic import BaseModel
 from ..core import behavior
 from ..core.answer import Answer, normalize
 from ..core.distance import choose_weighted
-from ..core.defenses import preset as defense_preset
+from ..core.defenses import preset as defense_preset, with_overrides
 from ..core.ledger import RoundRecord
-from ..core.protocol import ProtocolConfig, Vote
+from ..core.protocol import ProtocolConfig, Vote, malicious_acts_honest, plan_audits
 from ..core.replica import Replica
-from ..core.topology import build_graph
+from ..core.topology import build_graph, node_sort_key
 from .inference import MockBackend, ModelBackend
+from .dedicated_inference import DedicatedModel
 
 NODE_ID = os.getenv("NODE_ID") or os.getenv("HOSTNAME", "node")
 PROFILE = os.getenv("PROFILE", behavior.HONEST)
@@ -70,14 +74,24 @@ _config = behavior.BehaviorConfig(
 _rng = random.Random(SEED)
 _mock_backend = MockBackend(_config, _rng)
 _model_backend: Optional[ModelBackend] = None
+_dedicated_backend: Optional[DedicatedModel] = None
+_model_lock = threading.RLock()
 
-app = FastAPI(title=f"Node {NODE_ID}", version="1.0")
+@asynccontextmanager
+async def _lifespan(_app):
+    if INFERENCE_MODE == "model" and os.getenv("MODEL_RUN_ID"):
+        await asyncio.to_thread(lambda: _get_dedicated_backend().ensure_loaded())
+    yield
+
+
+app = FastAPI(title=f"Node {NODE_ID}", version="1.0", lifespan=_lifespan)
 
 
 class InferRequest(BaseModel):
     task_id: str
     question: str
     expected: Optional[float] = None  # preenchido apenas em modo simulação
+    round_index: int = 0
 
 
 class InferResponse(BaseModel):
@@ -90,7 +104,12 @@ class InferResponse(BaseModel):
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "node_id": NODE_ID, "profile": PROFILE, "mode": INFERENCE_MODE}
+    value = {"status": "ok", "node_id": NODE_ID, "profile": PROFILE, "mode": INFERENCE_MODE}
+    if INFERENCE_MODE == "model" and os.getenv("MODEL_RUN_ID"):
+        value.update(model_loaded=_dedicated_backend is not None and _dedicated_backend.loaded,
+                     model_instances=1 if _dedicated_backend is not None and _dedicated_backend.loaded else 0,
+                     quantization=os.getenv("MODEL_QUANTIZATION"))
+    return value
 
 
 @app.post("/infer", response_model=InferResponse)
@@ -111,6 +130,12 @@ async def _run_inference(request: InferRequest) -> tuple[Optional[Answer], int]:
         await _sleep_ms(latency)
         return answer, latency
 
+    if INFERENCE_MODE == "gateway":
+        return await _gateway_inference(request)
+
+    if INFERENCE_MODE == "model" and os.getenv("MODEL_RUN_ID"):
+        return await _dedicated_inference(request)
+
     # INFERENCE_MODE == "model" (processo real: nós não recebem gabarito).
     if PROFILE == behavior.MALICIOUS:
         latency = _rng.randint(*_config.malicious_latency_ms)
@@ -130,6 +155,119 @@ async def _run_inference(request: InferRequest) -> tuple[Optional[Answer], int]:
     started = time.perf_counter()
     answer = await _solve_with_model(request.question)
     latency = int((time.perf_counter() - started) * 1000)
+    return answer, latency
+
+
+def _gateway_seed(round_index: int, node_id: str) -> int:
+    encoded = f"{int(os.getenv('EXPERIMENT_SEED', '0'))}:{round_index}:{node_id}".encode("utf-8")
+    return int.from_bytes(hashlib.sha256(encoded).digest()[:8], "big") & ((1 << 63) - 1)
+
+
+def _get_dedicated_backend() -> DedicatedModel:
+    global _dedicated_backend
+    with _model_lock:
+        if _dedicated_backend is None:
+            _dedicated_backend = DedicatedModel(
+                node_id=NODE_ID, run_id=os.environ["MODEL_RUN_ID"], model_name=MODEL_NAME,
+                cache_dir=os.environ["MODEL_CACHE_DIR"], quantization=os.getenv("MODEL_QUANTIZATION", "nf4"),
+                device=os.getenv("MODEL_DEVICE", "cuda"), revision=os.getenv("MODEL_REVISION"),
+                max_new_tokens=int(os.getenv("MODEL_MAX_NEW_TOKENS", "256")),
+                temperature=float(os.getenv("MODEL_TEMPERATURE", "0.7")), top_p=float(os.getenv("MODEL_TOP_P", "0.95")))
+        return _dedicated_backend
+
+
+async def _raw_dedicated(request: InferRequest) -> dict:
+    return await asyncio.to_thread(_get_dedicated_backend().generate, round_index=request.round_index,
+                                   task_id=request.task_id, question=request.question,
+                                   seed=_gateway_seed(request.round_index, NODE_ID))
+
+
+class ModelAnswerRequest(InferRequest):
+    run_id: str
+    node_id: str
+
+
+@app.post("/model_answer")
+async def model_answer(request: ModelAnswerRequest) -> dict:
+    """Raw local generation used only to coordinate the experimental collusion."""
+    if INFERENCE_MODE != "model" or not os.getenv("MODEL_RUN_ID"):
+        raise HTTPException(status_code=404, detail="Dedicated model disabled")
+    if request.run_id != os.environ["MODEL_RUN_ID"] or request.node_id != NODE_ID:
+        raise HTTPException(status_code=409, detail="Model request belongs to another scenario or node")
+    try:
+        return {"node_id": NODE_ID, "run_id": request.run_id, **await _raw_dedicated(request)}
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+async def _dedicated_inference(request: InferRequest) -> tuple[Optional[Answer], int]:
+    # Every participant, including each malicious participant, calls its OWN
+    # resident model before applying the experimental attack transformation.
+    raw = await _raw_dedicated(request)
+    answer, latency, base_id = normalize(raw["answer"]), int(raw["latency_ms"]), NODE_ID
+    if PROFILE == behavior.MALICIOUS and not malicious_acts_honest(request.round_index, _protocol):
+        base_id = min(COLLUDERS, key=node_sort_key) if COLLUDERS else NODE_ID
+        base = answer
+        if base_id != NODE_ID:
+            response = await _http().post(f"{NODE_URL_TEMPLATE.format(id=base_id)}/model_answer", json={
+                "run_id": os.environ["MODEL_RUN_ID"], "node_id": base_id,
+                "round_index": request.round_index, "task_id": request.task_id, "question": request.question})
+            response.raise_for_status()
+            payload = response.json()
+            if payload.get("node_id") != base_id or payload.get("run_id") != os.environ["MODEL_RUN_ID"]:
+                raise ValueError("Collusion base belongs to another node or scenario")
+            base = normalize(payload["answer"])
+        rng = random.Random(f"{int(os.getenv('EXPERIMENT_SEED', '0'))}:{request.round_index}:noise")
+        noise_mode = os.getenv("NOISE_MODE", "relative")
+        if noise_mode == "relative":
+            answer = behavior.corrupt_relative(base, rng, float(os.getenv("NOISE_DISTANCE", "0.2")))
+        elif noise_mode == "multiplicative":
+            answer = behavior.corrupt_with_noise(base, rng)
+        else:
+            raise ValueError("Modo de ruído inválido.")
+    await asyncio.to_thread(_get_dedicated_backend().record_response, request.round_index, answer, base_id)
+    return answer, latency
+
+
+async def _gateway_inference(request: InferRequest) -> tuple[Optional[Answer], int]:
+    gateway = os.environ["GATEWAY_URL"].rstrip("/")
+    run_id = os.environ["GATEWAY_RUN_ID"]
+    async def generate(node_id: str, profile: str) -> tuple[Optional[Answer], int]:
+        payload = {"run_id": run_id, "node_id": node_id, "profile": profile,
+                   "round_index": request.round_index, "task_id": request.task_id,
+                   "question": request.question, "seed": _gateway_seed(request.round_index, node_id)}
+        # Muitos nós podem abrir a conexão ao mesmo tempo. Uma falha de
+        # conexão não deve invalidar toda a rodada: repita com o mesmo pedido,
+        # cuja identidade é idempotente no gateway. Não repetimos erros HTTP ou
+        # de leitura, para não mascarar falhas de geração já em andamento.
+        for attempt in range(8):
+            try:
+                response = await _http().post(f"{gateway}/inference", json=payload)
+                break
+            except httpx.ConnectError:
+                if attempt == 7:
+                    raise
+                jitter = int.from_bytes(hashlib.sha256(node_id.encode("utf-8")).digest()[:2], "big") / 65535
+                await asyncio.sleep(min(4.0, 0.25 * (2 ** attempt)) + jitter * 0.25)
+        response.raise_for_status()
+        result = response.json()
+        return normalize(result["answer"]), int(result["latency_ms"])
+
+    answer, latency = await generate(NODE_ID, PROFILE)
+    if PROFILE == behavior.MALICIOUS and not malicious_acts_honest(request.round_index, _protocol):
+        base_id = min(COLLUDERS, key=node_sort_key) if COLLUDERS else NODE_ID
+        if base_id != NODE_ID:
+            base, _ = await generate(base_id, behavior.MALICIOUS)
+        else:
+            base = answer
+        noise_rng = random.Random(f"{int(os.getenv('EXPERIMENT_SEED', '0'))}:{request.round_index}:noise")
+        noise_mode = os.getenv("NOISE_MODE", "relative")
+        if noise_mode == "relative":
+            answer = behavior.corrupt_relative(base, noise_rng, float(os.getenv("NOISE_DISTANCE", "0.2")))
+        elif noise_mode == "multiplicative":
+            answer = behavior.corrupt_with_noise(base, noise_rng)
+        else:
+            raise ValueError("Modo de ruído inválido.")
     return answer, latency
 
 
@@ -182,14 +320,32 @@ _attacks = behavior.AttackConfig(
     auditor_attack=os.getenv("AUDITOR_ATTACK", "none"),
 )
 _alpha_down = os.getenv("ALPHA_DOWN")
+_audit_mode = os.getenv("AUDIT_MODE", "fixed")
+_rounds = int(os.getenv("ROUNDS", "20"))
+_test_every = int(os.getenv("TEST_EVERY", "10"))
+_audited = plan_audits(int(os.getenv("EXPERIMENT_SEED", "0")), _rounds, _test_every,
+                       float(os.getenv("AUDIT_P", "0.1"))) if _audit_mode == "random" else frozenset()
 _protocol = ProtocolConfig(
     signal=os.getenv("SIGNAL", "hybrid"),
     alpha=float(os.getenv("ALPHA", "0.3")),
     mechanism=os.getenv("MECHANISM", "ema"),
     alpha_down=float(_alpha_down) if _alpha_down else None,
     initial=float(os.getenv("INITIAL_REPUTATION", "0.5")),
-    test_every=int(os.getenv("TEST_EVERY", "10")),
-    defense=defense_preset(os.getenv("DEFENSE", "all")),
+    test_every=_test_every,
+    consensus_mode=os.getenv("CONSENSUS_MODE", "exact"),
+    consensus_center=os.getenv("CONSENSUS_CENTER", "medoid"),
+    validation_score=os.getenv("VALIDATION_SCORE", "graded"),
+    malicious_strategy=os.getenv("MALICIOUS_STRATEGY", "always"),
+    honest_rounds=int(os.getenv("HONEST_ROUNDS", "5")),
+    audit_mode=_audit_mode,
+    audited_rounds=_audited,
+    alpha_up=float(os.getenv("ALPHA_UP", "0.1")),
+    defense=with_overrides(
+        defense_preset(os.getenv("DEFENSE", "all")),
+        calibration_rounds=os.getenv("CALIBRATION_ROUNDS"),
+        consensus_alpha=os.getenv("CONSENSUS_ALPHA"),
+        oracle_alpha=os.getenv("ORACLE_ALPHA"),
+    ),
 )
 _replica: Optional[Replica] = None
 if PEERS:
@@ -289,7 +445,8 @@ async def task(message: TaskMessage) -> dict:
     async def own() -> None:
         if route == "process":
             _answers[message.round_index] = await _run_inference(
-                InferRequest(task_id=message.task_id, question=message.question, expected=message.expected),
+                InferRequest(task_id=message.task_id, question=message.question, expected=message.expected,
+                             round_index=message.round_index),
             )
 
     _, children = await asyncio.gather(own(), _flood("/task", message.model_dump(), message.sender))

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+mkdir -p /opt/distributed-ai/project
+exec > >(tee -a /opt/distributed-ai/bootstrap.log) 2>&1
+export AWS_DEFAULT_REGION='${aws_region}' AWS_REGION='${aws_region}' AWS_PAGER=""
+RESULTS_URI='s3://${results_bucket}/runs/${run_id}'
+
+finish() {
+  rc=$?
+  trap - EXIT
+  set +e
+  if command -v aws >/dev/null; then
+    log_uploaded=false
+    timeout 90 aws s3 cp /opt/distributed-ai/bootstrap.log "$RESULTS_URI/logs/bootstrap.log"
+    test "$?" -ne 0 || log_uploaded=true
+    if ! timeout 30 aws s3 ls "$RESULTS_URI/status.json" >/dev/null 2>&1; then
+      printf '{"run_id":"${run_id}","state":"failed","stage":"bootstrap","exit_code":%s,"updated_at":"%s","upload_complete":%s}\n' "$rc" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$log_uploaded" > /opt/distributed-ai/bootstrap-status.json
+      timeout 60 aws s3 cp /opt/distributed-ai/bootstrap-status.json "$RESULTS_URI/status.json" --content-type application/json
+    fi
+  fi
+  sync
+  shutdown -h now
+}
+trap finish EXIT
+
+# Timer estabelecido antes de qualquer download/install. Um boot incompleto
+# também termina a instância; o Scheduler da AWS é uma segunda proteção.
+deadline_epoch=$(date -u -d '${expires_at}Z' +%s)
+remaining_seconds=$((deadline_epoch - $(date -u +%s)))
+test "$remaining_seconds" -gt 0
+systemd-run --unit=distributed-ai-deadline --on-active="$remaining_seconds" /sbin/shutdown -h now
+if ! command -v aws >/dev/null; then
+  export DEBIAN_FRONTEND=noninteractive
+  timeout 600 apt-get update
+  timeout 600 apt-get install -y awscli
+fi
+timeout 600 aws s3 cp "$RESULTS_URI/input/source.tar.gz" /opt/distributed-ai/source.tar.gz
+timeout 120 aws s3 cp "$RESULTS_URI/input/run.json" /opt/distributed-ai/run.json
+tar --extract --gzip --file=/opt/distributed-ai/source.tar.gz --directory=/opt/distributed-ai/project --no-same-owner
+cd /opt/distributed-ai/project
+bash infra/aws/worker/bootstrap.sh /opt/distributed-ai/run.json

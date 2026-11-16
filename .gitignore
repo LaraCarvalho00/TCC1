@@ -13,6 +13,7 @@ __pycache__/
 
 # Ambientes virtuais
 .venv/
+.venv-llm/
 venv/
 env/
 
@@ -22,6 +23,16 @@ env/
 .cache/
 
 # Saídas experimentais geradas
+/resultados/
 sistema/resultados/
-entrega_a4/*.csv
-entrega_a4/figuras/
+
+# Infraestrutura local e estado Terraform (os lockfiles de providers ficam no Git)
+.cloud/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
