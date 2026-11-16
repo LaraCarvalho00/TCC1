@@ -1,0 +1,9 @@
+aws_region                       = "us-east-1"
+project_name                     = "distributed-ai"
+run_id                           = "example-20261115"
+results_bucket                   = "distributed-ai-123456789012-us-east-1-results"
+runtime_permissions_boundary_arn = "arn:aws:iam::123456789012:policy/distributed-ai-runtime-boundary"
+instance_type                    = "g6e.48xlarge"
+node_count                       = 50
+expires_at                       = "2026-11-20T12:00:00"
+# ami_id                         = "ami-0123456789abcdef0"

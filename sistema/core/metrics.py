@@ -34,6 +34,7 @@ import statistics
 import subprocess
 from typing import TYPE_CHECKING, Optional
 
+from .distance import relative_distance
 from .schemas import RoundResult
 
 if TYPE_CHECKING:
@@ -98,6 +99,10 @@ ROUND_FIELDS = [
     "is_tie_majority",
     "is_test",               # 1 se esta rodada é um teste
     "test_round",            # número 1-based da rodada, vazio quando não é teste
+    "pct_honest_exact",      # honestos com resposta igual ao gabarito / honestos
+    "pct_honest_responded",  # honestos que responderam / honestos
+    "audited",               # 1 se a rodada teve gabarito
+    "calibration",           # 1 se a rodada é de calibração
 ]
 
 HISTORY_FIELDS = [
@@ -169,6 +174,7 @@ class MetricsLogger:
         experiment_id: Optional[str] = None,
         overwrite: bool = False,
         row_sync: bool = True,
+        git_sha: Optional[str] = None,
     ) -> None:
         if not overwrite and os.path.exists(output_dir):
             raise FileExistsError(
@@ -177,6 +183,7 @@ class MetricsLogger:
             )
         os.makedirs(output_dir, exist_ok=True)
         self.output_dir = output_dir
+        self.git_sha = git_sha
         self.experiment_id = experiment_id or _generate_id()
         self.per_node_rows: list[dict] = []
         self.round_rows: list[dict] = []
@@ -310,6 +317,8 @@ class MetricsLogger:
         is_tie_weighted: bool,
         is_tie_majority: bool,
         is_test: bool = False,
+        audited: bool = False,
+        calibration: bool = False,
     ) -> None:
         latencies = [r.latency_ms for r in result.responses if r.answer is not None]
         mean_latency = round(statistics.mean(latencies), 1) if latencies else 0.0
@@ -343,6 +352,9 @@ class MetricsLogger:
             "is_tie_majority": int(is_tie_majority),
             "is_test": int(is_test),
             "test_round": (result.round_index + 1) if is_test else "",
+            **_honest_fractions(result),
+            "audited": int(audited),
+            "calibration": int(calibration),
         }
         self.round_rows.append(row)
         self._round_stream.write(row)
@@ -360,6 +372,16 @@ class MetricsLogger:
         test_rows = [r for r in self.round_rows if int(r.get("is_test", 0)) == 1]
         test_weighted = sum(r["consensus_correct"] for r in test_rows)
         test_majority = sum(r["majority_correct"] for r in test_rows)
+        no_oracle = [
+            r for r in self.round_rows
+            if int(r.get("audited", 0)) == 0 and int(r.get("calibration", 0)) == 0
+        ]
+        no_oracle_weighted = sum(int(r["consensus_correct"]) for r in no_oracle)
+        no_oracle_majority = sum(int(r["majority_correct"]) for r in no_oracle)
+        no_oracle_distances = [
+            relative_distance(_stored_answer(r.get("consensus_weighted")), _stored_answer(r.get("expected")))
+            for r in no_oracle
+        ]
         latencies = [r["latency_ms"] for r in self.per_node_rows if r["answered"]]
 
         # Reputação final por perfil (instantâneo)
@@ -390,6 +412,12 @@ class MetricsLogger:
             "n_test_rounds": len(test_rows),
             "consensus_accuracy_weighted_on_tests": _ratio(test_weighted, len(test_rows)),
             "consensus_accuracy_majority_on_tests": _ratio(test_majority, len(test_rows)),
+            "consensus_accuracy_weighted_no_oracle": _ratio(no_oracle_weighted, len(no_oracle)),
+            "consensus_accuracy_majority_no_oracle": _ratio(no_oracle_majority, len(no_oracle)),
+            "n_rounds_no_oracle": len(no_oracle),
+            "mean_distance_to_truth_no_oracle": (
+                round(statistics.mean(no_oracle_distances), 6) if no_oracle_distances else None
+            ),
             "tests": [
                 {
                     "round": int(r["test_round"]),
@@ -403,6 +431,7 @@ class MetricsLogger:
             "final_reputation_by_node": {k: round(v, 4) for k, v in final_reputations.items()},
             "mean_reputation_by_profile_across_rounds": mean_rep_across_rounds,
             "recovery_round": recovery_round([int(r["consensus_correct"]) for r in self.round_rows]),
+            "mean_pct_honest_exact": _mean_honest_exact(self.round_rows),
         }
         return result
 
@@ -445,6 +474,7 @@ class MetricsLogger:
             alpha=tracker.alpha,
             alpha_down=tracker.alpha_down,
             initial=tracker.initial,
+            git_sha_override=self.git_sha,
         )
         return summ
 
@@ -533,7 +563,9 @@ def dynamic_summary(
     (onde está a maioria dos nós não maliciosos); divisões e réplicas
     divergentes olham a rede inteira.
     """
-    ref = [r for r in leadership_rows if int(r["is_reference"]) == 1]
+    ref_all = [r for r in leadership_rows if int(r["is_reference"]) == 1]
+    # Rodadas de calibração sem líder não entram nas contagens de liderança.
+    ref = [r for r in ref_all if r["outcome"] != "calibration"]
     leaders = [r["leader"] for r in ref]
 
     by_profile: dict[str, int] = {}
@@ -554,7 +586,7 @@ def dynamic_summary(
     voided = [r for r in ref if r["outcome"] == "voided"]
     honest_heads = {heads[n] for n, p in profiles.items() if p != "malicious" and n in heads}
     hops = [int(r["hops"]) for r in leadership_rows]
-    oracle_rows = [r for r in ref if r["oracle"]]
+    oracle_rows = [r for r in ref_all if r["oracle"]]
 
     return {
         "dynamic": {
@@ -572,11 +604,16 @@ def dynamic_summary(
             "censored_accepted": sum(1 for r in accepted if int(r["censored_complaints"]) > 0),
             "mandates_ended_by_audit": sum(1 for r in voided if str(r["auditor_vote"]) == "0"),
             "auditor_false_reject_penalties": sum(1 for r in ref if ":false_reject" in str(r["penalties"])),
+            "auditor_malicious_rounds": sum(1 for r in ref if r["auditor_profile"] == "malicious"),
+            "auditor_malicious_vetoes": sum(
+                1 for r in ref if r["auditor_profile"] == "malicious" and str(r["auditor_vote"]) == "0"
+            ),
             "chain_split_rounds": sum(1 for r in leadership_rows if r["refused_nodes"]),
             "n_chains_final": len(set(heads.values())),
             "replicas_divergent_final": max(0, len(set(heads.values())) - 1),
             "honest_replicas_divergent_final": max(0, len(honest_heads) - 1),
             "oracle_rounds": len(oracle_rows),
+            "leaderless_calibration_rounds": sum(1 for r in ref_all if r["outcome"] == "calibration"),
             "oracle_blocked_rounds": sum(1 for r in oracle_rows if r["oracle"] == "blocked"),
             "oracle_rejections_total": sum(int(r["oracle_rejecters"] or 0) for r in ref),
             "malicious_power_mass_by_round": [round(float(r["malicious_power_mass"]), 4) for r in ref],
@@ -592,8 +629,44 @@ def _generate_id() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
+def _honest_fractions(result) -> dict:
+    """Frações sobre todos os nós de perfil honesto, tenham respondido ou não."""
+    honest = [response for response in result.responses if response.profile == "honest"]
+    if not honest:
+        return {"pct_honest_exact": "", "pct_honest_responded": ""}
+    exact = sum(
+        1 for response in honest
+        if response.answer is not None and response.answer == result.expected
+    )
+    responded = sum(1 for response in honest if response.answer is not None)
+    return {
+        "pct_honest_exact": round(exact / len(honest), 6),
+        "pct_honest_responded": round(responded / len(honest), 6),
+    }
+
+
+def _mean_honest_exact(rows: list[dict]):
+    values = [float(row["pct_honest_exact"]) for row in rows if row.get("pct_honest_exact") != ""]
+    return round(statistics.mean(values), 6) if values else None
+
+
 def _ratio(part: int, total: int) -> float:
     return round(part / total, 4) if total else 0.0
+
+
+def _stored_answer(value):
+    """Valor gravado na linha da rodada. Vazio conta como resposta ausente."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(number) if number.is_integer() else number
 
 
 def _write_manifest(
@@ -606,8 +679,9 @@ def _write_manifest(
     alpha: float,
     alpha_down: float,
     initial: float,
+    git_sha_override: Optional[str] = None,
 ) -> None:
-    git_sha = _git_sha()
+    git_sha = _git_sha() if git_sha_override is None else git_sha_override
     manifest = {
         "experiment_id": experiment_id,
         "created_at": datetime.datetime.now().isoformat(),

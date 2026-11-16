@@ -1,58 +1,125 @@
-# Cenário inicial: 1 orquestrador fixo + 4 nós (3 honestos, 1 malicioso).
-# Rede bem conectada (estrela): o orquestrador fala com cada nó.
-# Modo mock por padrão (valida comunicação assíncrona e reputação sem modelo).
-
 services:
   node-0:
-    build:
-      context: .
-      dockerfile: sistema/node/Dockerfile
     environment:
       NODE_ID: node-0
-      PROFILE: honest
+      PROFILE: malicious
       INFERENCE_MODE: mock
-      SEED: "10"
-
-  node-1:
+      SEED: '10'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+      MALICIOUS_VALUE: '999'
+      MAX_SLEEP_MS: '200'
+      PEERS: node-0,node-1,node-2,node-3
+      NEIGHBORS: node-1,node-2
+      TOPOLOGY: kregular
+      DEGREE: '2'
+      GRAPH_SEED: '10'
+      SIGNAL: hybrid
+      MECHANISM: ema
+      ALPHA: '0.3'
+      INITIAL_REPUTATION: '0.5'
+      TEST_EVERY: '10'
+      DEFENSE: all
+      LEADER_ATTACK: none
+      AUDITOR_ATTACK: none
+      COLLUDERS: node-0
     build:
       context: .
       dockerfile: sistema/node/Dockerfile
+  node-1:
     environment:
       NODE_ID: node-1
       PROFILE: honest
       INFERENCE_MODE: mock
-      SEED: "11"
-
-  node-2:
+      SEED: '11'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+      MAX_SLEEP_MS: '200'
+      PEERS: node-0,node-1,node-2,node-3
+      NEIGHBORS: node-0,node-3
+      TOPOLOGY: kregular
+      DEGREE: '2'
+      GRAPH_SEED: '10'
+      SIGNAL: hybrid
+      MECHANISM: ema
+      ALPHA: '0.3'
+      INITIAL_REPUTATION: '0.5'
+      TEST_EVERY: '10'
+      DEFENSE: all
+      LEADER_ATTACK: none
+      AUDITOR_ATTACK: none
     build:
       context: .
       dockerfile: sistema/node/Dockerfile
+  node-2:
     environment:
       NODE_ID: node-2
       PROFILE: honest
       INFERENCE_MODE: mock
-      SEED: "12"
-
-  node-3:
+      SEED: '12'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+      MAX_SLEEP_MS: '200'
+      PEERS: node-0,node-1,node-2,node-3
+      NEIGHBORS: node-0,node-3
+      TOPOLOGY: kregular
+      DEGREE: '2'
+      GRAPH_SEED: '10'
+      SIGNAL: hybrid
+      MECHANISM: ema
+      ALPHA: '0.3'
+      INITIAL_REPUTATION: '0.5'
+      TEST_EVERY: '10'
+      DEFENSE: all
+      LEADER_ATTACK: none
+      AUDITOR_ATTACK: none
     build:
       context: .
       dockerfile: sistema/node/Dockerfile
+  node-3:
     environment:
       NODE_ID: node-3
-      PROFILE: malicious
+      PROFILE: honest
       INFERENCE_MODE: mock
-      SEED: "13"
-      MALICIOUS_VALUE: "999"
-
+      SEED: '13'
+      HONEST_P_CORRECT: '0.9'
+      UNSTABLE_P_DROP: '0.3'
+      UNSTABLE_P_CORRECT: '0.5'
+      MAX_SLEEP_MS: '200'
+      PEERS: node-0,node-1,node-2,node-3
+      NEIGHBORS: node-1,node-2
+      TOPOLOGY: kregular
+      DEGREE: '2'
+      GRAPH_SEED: '10'
+      SIGNAL: hybrid
+      MECHANISM: ema
+      ALPHA: '0.3'
+      INITIAL_REPUTATION: '0.5'
+      TEST_EVERY: '10'
+      DEFENSE: all
+      LEADER_ATTACK: none
+      AUDITOR_ATTACK: none
+    build:
+      context: .
+      dockerfile: sistema/node/Dockerfile
   orchestrator:
+    depends_on:
+    - node-0
+    - node-1
+    - node-2
+    - node-3
+    volumes:
+    - ./sistema/results:/app/sistema/results
+    - ./sistema/config:/app/sistema/config
+    command:
+    - python
+    - -m
+    - sistema.orchestrator.run
+    - --config
+    - sistema/config/experiment.yaml
     build:
       context: .
       dockerfile: sistema/orchestrator/Dockerfile
-    depends_on:
-      - node-0
-      - node-1
-      - node-2
-      - node-3
-    volumes:
-      - ./sistema/results:/app/sistema/results
-    command: ["python", "-m", "sistema.orchestrator.run", "--config", "sistema/config/experiment.yaml"]

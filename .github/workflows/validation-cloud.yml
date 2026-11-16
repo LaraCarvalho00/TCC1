@@ -1,0 +1,90 @@
+name: Validation on temporary AWS GPU
+run-name: "Validation ${{ inputs.mode }} · ${{ inputs.rounds }} rounds"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "matrix: 50 nodes, malicious 20/40/60/80%; custom: use counts below"
+        type: choice
+        options: [matrix, custom]
+        default: matrix
+      honest_nodes:
+        description: "Honest nodes (custom mode only)"
+        type: number
+        default: 40
+      malicious_nodes:
+        description: "Malicious nodes (custom mode only)"
+        type: number
+        default: 10
+      rounds:
+        description: "Rounds per configuration (2–50)"
+        type: number
+        default: 50
+      seed:
+        description: "Predefined random seed"
+        type: number
+        default: 0
+      max_hours:
+        description: "Hard lifetime limit including setup (1–168 hours); partial results on timeout"
+        type: number
+        default: 72
+      instance_type:
+        description: "One NF4 model per node; 50 nodes require the 8-GPU profile"
+        type: choice
+        options: [g6e.48xlarge, g6e.12xlarge, g6e.4xlarge]
+        default: g6e.48xlarge
+
+permissions:
+  contents: read
+  id-token: write
+
+# Serializes provisioning and reconciliation, never cancels an active launch.
+concurrency:
+  group: validation-aws-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  RESULTS_BUCKET: ${{ vars.AWS_RESULTS_BUCKET }}
+  STATE_BUCKET: ${{ vars.AWS_TF_STATE_BUCKET }}
+  RUNTIME_BOUNDARY_ARN: ${{ vars.AWS_RUNTIME_BOUNDARY_ARN }}
+  PROJECT_NAME: ${{ vars.AWS_PROJECT_NAME }}
+  GPU_AMI_ID: ${{ vars.AWS_GPU_AMI_ID }}
+  RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+          terraform_wrapper: false
+      - name: Validate repository configuration
+        env:
+          ROLE_ARN: ${{ vars.AWS_GITHUB_ROLE_ARN }}
+        run: |
+          for key in AWS_REGION RESULTS_BUCKET STATE_BUCKET RUNTIME_BOUNDARY_ARN ROLE_ARN; do
+            test -n "${!key}" || { echo "Missing repository variable: $key"; exit 1; }
+          done
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: validation-${{ github.run_id }}
+      - run: python -m pip install boto3==1.40.72
+      - name: Provision GPU and start experiment
+        id: provision
+        env:
+          DISPATCH_INPUTS: ${{ toJSON(inputs) }}
+        run: python infra/aws/control.py launch --run-id "$RUN_ID"
+      - name: Destroy partially provisioned infrastructure on failure or cancellation
+        if: ${{ always() && (steps.provision.outcome == 'failure' || steps.provision.outcome == 'cancelled') }}
+        run: python infra/aws/control.py cleanup --run-id "$RUN_ID" --force

@@ -22,27 +22,33 @@ Fluxo de uma rodada:
 Sinais de reputação (``signal``):
 
 * ``truth``     : só o gabarito atualiza a reputação, em toda rodada (equivale
-                  ao orquestrador fixo de hoje).
+                  à configuração anterior de referência).
 * ``consensus`` : só a concordância com o consenso aceito (sem juiz).
 * ``hybrid``    : consenso nas rodadas normais; gabarito na calibração e nos
                   testes.
 """
 from __future__ import annotations
 
+import random
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
 
 from .answer import Answer, normalize
 from .behavior import AUDITOR_ATTACKS, LEADER_ATTACKS  # noqa: F401 (reexportados)
-from .consensus import ConsensusResult, weighted_consensus
+from .consensus import ConsensusResult
 from .defenses import DefenseConfig
+from .distance import CONSENSUS_CENTERS, choose_weighted, relative_distance
 from .ledger import RoundRecord, canonical_hash
 from .reputation import ReputationTracker, ReputationUpdate
 from .schedule import DEFAULT_TEST_EVERY, is_test_round
 from .topology import node_sort_key
 
 SIGNALS = ("truth", "consensus", "hybrid")
+CONSENSUS_MODES = ("exact", "distance")
+MALICIOUS_STRATEGIES = ("always", "on_off", "knows_schedule")
+AUDIT_MODES = ("fixed", "random")
+VALIDATION_SCORES = ("graded", "exact")
 
 # Motivos de recusa que qualquer nó consegue reproduzir a partir do registro.
 OBJECTIVE_REASONS = ("false_consensus", "forged")
@@ -62,10 +68,29 @@ class ProtocolConfig:
     bootstrap_margin: float = 0.05
     election_caution: float = 2.0
     defense: DefenseConfig = field(default_factory=DefenseConfig)
+    consensus_mode: str = "exact"
+    malicious_strategy: str = "always"
+    honest_rounds: int = 5
+    audit_mode: str = "fixed"
+    audited_rounds: frozenset[int] = field(default_factory=frozenset)
+    alpha_up: float = 0.1
+    validation_score: str = "graded"
+    consensus_center: str = "medoid"
 
     def __post_init__(self) -> None:
         if self.signal not in SIGNALS:
             raise ValueError(f"signal deve ser um de {SIGNALS!r}.")
+        if self.consensus_mode not in CONSENSUS_MODES:
+            raise ValueError(f"consensus_mode deve ser um de {CONSENSUS_MODES!r}.")
+        if self.malicious_strategy not in MALICIOUS_STRATEGIES:
+            raise ValueError(f"malicious_strategy deve ser um de {MALICIOUS_STRATEGIES!r}.")
+        if self.audit_mode not in AUDIT_MODES:
+            raise ValueError(f"audit_mode deve ser um de {AUDIT_MODES!r}.")
+        if self.validation_score not in VALIDATION_SCORES:
+            raise ValueError(f"validation_score deve ser um de {VALIDATION_SCORES!r}.")
+        if self.consensus_center not in CONSENSUS_CENTERS:
+            raise ValueError(f"consensus_center deve ser um de {CONSENSUS_CENTERS!r}.")
+        object.__setattr__(self, "audited_rounds", frozenset(self.audited_rounds))
 
     @property
     def consensus_alpha(self) -> Optional[float]:
@@ -105,7 +130,12 @@ class NetworkState:
     def _tracker(self) -> ReputationTracker:
         c = self.config
         return ReputationTracker(
-            self.node_ids, alpha=c.alpha, initial=c.initial, mechanism=c.mechanism, alpha_down=c.alpha_down,
+            self.node_ids,
+            alpha=c.alpha,
+            initial=c.initial,
+            mechanism=c.mechanism,
+            alpha_down=c.alpha_down,
+            alpha_up=c.alpha_up,
         )
 
     @property
@@ -141,8 +171,52 @@ class NetworkState:
         return sum(max(0.0, self.power.get(n)) for n in nodes)
 
 
+def leaderless_calibration_round(round_index: int, config: ProtocolConfig) -> bool:
+    """Rodada de calibração sem líder (só com gabarito e a opção ligada)."""
+    return (
+        config.signal != "consensus"
+        and config.defense.leaderless_calibration
+        and round_index < config.defense.calibration_rounds
+    )
+
+
+def plan_audits(seed, n_rounds: int, test_every: int, probability: float) -> frozenset[int]:
+    """Rodadas 0-based auditadas. As de teste ficam de fora."""
+    rng = random.Random(f"{seed}:audit")
+    chosen = set()
+    for index in range(n_rounds):
+        if is_test_round(index, test_every):
+            continue
+        if rng.random() < probability:
+            chosen.add(index)
+    return frozenset(chosen)
+
+
+def malicious_acts_honest(round_index: int, config: ProtocolConfig) -> bool:
+    """O malicioso imita um honesto nesta rodada.
+
+    ``on_off`` só cobre as primeiras ``honest_rounds``. ``knows_schedule``
+    também cobre o que é previsível: a calibração e, no calendário fixo, toda
+    rodada em que o protocolo usa o gabarito. No sorteio aleatório ele não
+    consulta ``audited_rounds``.
+    """
+    if config.malicious_strategy == "on_off":
+        return round_index < config.honest_rounds
+    if config.malicious_strategy != "knows_schedule":
+        return False
+    if round_index < config.honest_rounds:
+        return True
+    if config.signal != "consensus" and round_index < config.defense.calibration_rounds:
+        return True
+    if config.audit_mode == "random":
+        return False
+    return oracle_round(round_index, config)
+
+
 def oracle_round(round_index: int, config: ProtocolConfig) -> bool:
     """Indica se o juiz do experimento corrige esta rodada pelo gabarito."""
+    if config.audit_mode == "random":
+        return round_index in config.audited_rounds
     if config.signal == "consensus":
         return False
     if config.signal == "truth":
@@ -169,14 +243,22 @@ def compute_round(
     ataque de consenso falso); ``"auto"`` usa o consenso ponderado.
     """
     pairs = _pairs(responses)
-    result = weighted_consensus(pairs, state.consensus.weights())
+    mode = state.config.consensus_mode
+    result = choose_weighted(pairs, state.consensus.weights(), mode, state.config.consensus_center)
     reference = result.answer if consensus == "auto" else normalize(consensus)
     after = state.clone()
     updates: dict[str, ReputationUpdate] = {}
     if state.config.signal != "truth":
         for node_id, answer in pairs:
-            agree = answer is not None and reference is not None and answer == reference
-            updates[node_id] = after.consensus.update(node_id, agree, alpha=state.config.consensus_alpha)
+            if mode == "distance":
+                if answer is None:
+                    updates[node_id] = after.consensus.skip(node_id)
+                    continue
+                signal = 0.0 if reference is None else 1.0 - relative_distance(answer, reference)
+                updates[node_id] = after.consensus.update(node_id, signal, alpha=state.config.consensus_alpha)
+            else:
+                agree = answer is not None and reference is not None and answer == reference
+                updates[node_id] = after.consensus.update(node_id, agree, alpha=state.config.consensus_alpha)
     return result, reference, after.snapshot(), updates
 
 
@@ -287,12 +369,22 @@ def verify_record(
     ``objective`` pode ser passado já calculado (é o mesmo para todos os nós
     com o mesmo estado).
     """
+    return _verify_record_in_group(state, record, node_id=node_id, own_answer=own_answer,
+                                   prev_hash=prev_hash, objective=objective)
+
+
+def _verify_record_in_group(state, record, *, node_id, own_answer, prev_hash, objective, hash_valid=None, responses=None):
+    """Verifica o voto, com pré-cálculos opcionais de uma proposta na simulação."""
     if record.prev_hash != prev_hash:
         return Vote(node_id, False, "chain")
-    if record.hash != canonical_hash(record.content()):
+    if hash_valid is None:
+        hash_valid = record.hash == canonical_hash(record.content())
+    if not hash_valid:
         return Vote(node_id, False, "hash")
     if own_answer is not None:
-        listed = record.responses_map().get(node_id, _MISSING)
+        if responses is None:
+            responses = record.responses_map()
+        listed = responses.get(node_id, _MISSING)
         if listed is _MISSING or normalize(listed) != normalize(own_answer):
             return Vote(node_id, False, "censored")
     reason = objective_check(state, record) if objective is None else objective
@@ -423,6 +515,33 @@ def oracle_record(
     ).sealed()
 
 
+def calibration_record(
+    *,
+    prev_hash: str,
+    round_index: int,
+    task_id: str,
+    expected: Optional[Answer],
+    responses: dict[str, Optional[Answer]],
+    consensus: Optional[Answer],
+) -> RoundRecord:
+    """Registro de uma rodada de calibração sem líder.
+
+    ``consensus`` é só informativo (o consenso ponderado calculado com a
+    reputação de antes da rodada); a reputação é atualizada pelo gabarito.
+    """
+    pairs = tuple(tuple(p) for p in _pairs(responses))
+    return RoundRecord(
+        kind="calibration",
+        round_index=round_index,
+        prev_hash=prev_hash,
+        task_id=task_id,
+        responses=pairs,
+        consensus=normalize(consensus),
+        expected=normalize(expected),
+        graded=pairs,
+    ).sealed()
+
+
 # ---------------------------------------------------------------------------
 # Aplicação de registros
 # ---------------------------------------------------------------------------
@@ -453,13 +572,33 @@ def apply_record(state: NetworkState, record: RoundRecord) -> None:
     elif record.kind == "penalty":
         for nid, _ in record.penalties:
             _punish(state, nid)
-    elif record.kind == "oracle":
+    elif record.kind in ("oracle", "calibration"):
+        if record.kind == "calibration":
+            listed = record.responses_map()
+            for nid in state.node_ids:
+                history = state.presence.setdefault(nid, [])
+                history.append(listed.get(nid) is not None)
+                del history[:-max(1, state.config.availability_window)]
         alpha = state.config.oracle_alpha
         for nid, answer in record.graded:
-            correct = answer is not None and normalize(answer) == normalize(record.expected)
-            state.consensus.update(nid, correct, alpha=alpha)
-            if state.split:
-                state.power.update(nid, correct, alpha=alpha)
+            if state.config.consensus_mode == "distance":
+                if answer is None:
+                    state.consensus.skip(nid)
+                    if state.split:
+                        state.power.skip(nid)
+                    continue
+                if state.config.validation_score == "exact":
+                    signal = 1.0 if normalize(answer) == normalize(record.expected) else 0.0
+                else:
+                    signal = 1.0 - relative_distance(answer, record.expected)
+                state.consensus.update(nid, signal, alpha=alpha, ground_truth=True)
+                if state.split:
+                    state.power.update(nid, signal, alpha=alpha, ground_truth=True)
+            else:
+                correct = answer is not None and normalize(answer) == normalize(record.expected)
+                state.consensus.update(nid, correct, alpha=alpha, ground_truth=True)
+                if state.split:
+                    state.power.update(nid, correct, alpha=alpha, ground_truth=True)
 
 
 def replay(records: Iterable[RoundRecord], node_ids: Iterable[str], config: ProtocolConfig) -> NetworkState:

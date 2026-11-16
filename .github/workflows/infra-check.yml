@@ -1,0 +1,36 @@
+name: Validate cloud infrastructure
+on:
+  pull_request:
+    paths: ["infra/**", ".github/workflows/validation-*.yml", ".github/workflows/infra-check.yml", "sistema/node/**", "sistema/aplicacao/capacidade_nuvem.py", "sistema/scripts/runner_containers.py", "sistema/scripts/gen_compose.py", "sistema/scripts/cloud_run.py", "sistema/tests/**"]
+  push:
+    paths: ["infra/**", ".github/workflows/validation-*.yml", ".github/workflows/infra-check.yml", "sistema/node/**", "sistema/aplicacao/capacidade_nuvem.py", "sistema/scripts/runner_containers.py", "sistema/scripts/gen_compose.py", "sistema/scripts/cloud_run.py", "sistema/tests/**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+      - name: Validate Terraform syntax and providers without AWS credentials
+        run: |
+          terraform fmt -check -recursive infra/aws
+          for root in infra/aws/bootstrap infra/aws/run; do
+            terraform -chdir="$root" init -backend=false -input=false
+            terraform -chdir="$root" validate
+            terraform -chdir="$root" test -no-color
+          done
+      - name: Validate scripts and lifecycle decisions
+        run: |
+          bash -n infra/aws/worker/bootstrap.sh
+          python -m pip install pyyaml==6.0.3 -r sistema/requirements-node.txt
+          python -m unittest discover -s sistema/tests -p 'test_cloud_*.py' -v
+          python -m unittest sistema.tests.test_runner_containers -v
+          python -m unittest sistema.tests.test_dedicated_inference sistema.tests.test_runner_per_node sistema.tests.test_dedicated_orchestrator -v

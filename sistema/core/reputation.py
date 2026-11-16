@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-MECHANISMS = ("ema", "ema_asymmetric", "beta")
+MECHANISMS = ("ema", "ema_asymmetric", "beta", "ema_slow_up")
 
 
 @dataclass
@@ -71,6 +71,7 @@ class ReputationTracker:
         initial: float = 0.5,
         mechanism: str = "ema",
         alpha_down: Optional[float] = None,
+        alpha_up: float = 0.1,
     ) -> None:
         if not 0.0 < alpha <= 1.0:
             raise ValueError("alpha deve estar em (0, 1].")
@@ -81,6 +82,8 @@ class ReputationTracker:
 
         self.alpha = alpha
         self.alpha_down: float = alpha_down if alpha_down is not None else alpha / 2.0
+        self._alpha_down_explicit = alpha_down is not None
+        self.alpha_up = alpha_up
         self.initial = initial
         self.mechanism = mechanism
 
@@ -94,18 +97,31 @@ class ReputationTracker:
         self._failures: dict[str, float] = {nid: 1.0 for nid in ids}
 
     # ------------------------------------------------------------------
-    def update(self, node_id: str, correct: bool, alpha: Optional[float] = None) -> ReputationUpdate:
+    def update(
+        self,
+        node_id: str,
+        correct: bool | float,
+        alpha: Optional[float] = None,
+        ground_truth: bool = False,
+    ) -> ReputationUpdate:
         """Atualiza a reputação do nó e retorna o registro estruturado.
 
         A fórmula e os pesos utilizados são registrados no objeto retornado,
         permitindo auditoria completa de cada mudança de score.
+
+        ``correct`` continua aceitando verdadeiro ou falso. Um número em
+        ``[0, 1]`` é o sinal contínuo do modo por distância. Para 0 e 1 o
+        resultado é o mesmo das chamadas com falso e verdadeiro.
 
         ``alpha`` substitui a taxa só nesta chamada (sinal de consenso, gabarito
         ou punição). Em ``ema_asymmetric`` a descida mantém a proporção
         ``alpha_down / alpha``; em ``beta`` a contagem cresce ``alpha / self.alpha``
         em vez de 1. Sem ``alpha``, o comportamento é o original.
         """
-        s = 1.0 if correct else 0.0
+        if isinstance(correct, bool):
+            s = 1.0 if correct else 0.0
+        else:
+            s = float(correct)
         before = self.reputation.get(node_id, self.initial)
         rate = self.alpha if alpha is None else alpha
 
@@ -113,18 +129,32 @@ class ReputationTracker:
             alpha_used = rate
             after = (1.0 - rate) * before + rate * s
 
+        elif self.mechanism == "ema_slow_up":
+            # Rodada comum: a mesma taxa única da EMA. Rodada com gabarito:
+            # sobe com alpha_up e desce com 0,8, salvo --alpha-down explícito.
+            if ground_truth:
+                down = self.alpha_down if self._alpha_down_explicit else 0.8
+                alpha_used = self.alpha_up if s >= before else down
+            else:
+                alpha_used = rate
+            after = (1.0 - alpha_used) * before + alpha_used * s
+
         elif self.mechanism == "ema_asymmetric":
             # Subida usa alpha completo; descida usa alpha_down (mais lenta).
+            # s == 1.0 cobre o acerto booleano; qualquer outro sinal desce.
             down = self.alpha_down if alpha is None else rate * self.alpha_down / self.alpha
-            alpha_used = rate if correct else down
+            alpha_used = rate if s == 1.0 else down
             after = (1.0 - alpha_used) * before + alpha_used * s
 
         else:  # beta — distribuição Beta com prior uniforme Beta(1,1)
             weight = 1.0 if alpha is None else rate / self.alpha
-            if correct:
+            if s == 1.0:
                 self._successes[node_id] = self._successes.get(node_id, 1.0) + weight
-            else:
+            elif s == 0.0:
                 self._failures[node_id] = self._failures.get(node_id, 1.0) + weight
+            else:
+                self._successes[node_id] = self._successes.get(node_id, 1.0) + weight * s
+                self._failures[node_id] = self._failures.get(node_id, 1.0) + weight * (1.0 - s)
             s_cnt = self._successes.get(node_id, 1.0)
             f_cnt = self._failures.get(node_id, 1.0)
             after = s_cnt / (s_cnt + f_cnt)
@@ -136,6 +166,15 @@ class ReputationTracker:
         self.history.setdefault(node_id, [self.initial]).append(after)
 
         delta = after - before
+        return self._record(node_id, before, after, delta, alpha_used, s)
+
+    def skip(self, node_id: str) -> ReputationUpdate:
+        """Não altera a reputação nesta rodada (resposta ausente no modo distância)."""
+        before = self.reputation.get(node_id, self.initial)
+        self.history.setdefault(node_id, [self.initial]).append(before)
+        return self._record(node_id, before, before, 0.0, 0.0, before)
+
+    def _record(self, node_id: str, before: float, after: float, delta: float, alpha_used: float, s: float) -> ReputationUpdate:
         return ReputationUpdate(
             node_id=node_id,
             score_before=round(before, 6),
@@ -169,7 +208,8 @@ class ReputationTracker:
             alpha=self.alpha,
             initial=self.initial,
             mechanism=self.mechanism,
-            alpha_down=self.alpha_down,
+            alpha_down=self.alpha_down if self._alpha_down_explicit else None,
+            alpha_up=self.alpha_up,
         )
         twin.restore(self.snapshot())
         twin.history = {nid: list(values) for nid, values in self.history.items()}

@@ -1,0 +1,6 @@
+# Scripts de inicialização são executados em Linux nas instâncias AWS.
+*.sh text eol=lf
+*.tftpl text eol=lf
+*.tf text eol=lf
+*.tfvars.example text eol=lf
+.github/workflows/*.yml text eol=lf

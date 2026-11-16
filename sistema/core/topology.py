@@ -3,7 +3,7 @@
 Dois tipos de grafo:
 
 * ``star``     : estrela com centro rotativo. Qualquer líder fala direto com
-                 todos os nós (grafo completo), como o orquestrador fixo de hoje,
+                 todos os nós (grafo completo),
                  mas o papel de centro muda de nó a cada rodada.
 * ``kregular`` : grafo aleatório k-regular. Cada nó conhece só ``degree``
                  vizinhos; a mensagem chega aos demais por repasse.

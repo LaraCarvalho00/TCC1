@@ -20,23 +20,26 @@ from typing import Optional
 
 from . import behavior
 from .answer import Answer
-from .consensus import weighted_consensus
+from .distance import choose_baseline, choose_weighted
 from .election import elect_leader, pick_auditor
-from .ledger import Ledger, RoundRecord
+from .ledger import Ledger, RoundRecord, canonical_hash
 from .protocol import (
     Decision,
     NetworkState,
     ProtocolConfig,
     Vote,
     apply_record,
+    calibration_record,
     decide,
+    leaderless_calibration_round,
+    malicious_acts_honest,
     objective_check,
+    _verify_record_in_group,
     oracle_record,
     oracle_round,
     outcome_records,
     propose_record,
     tally_quorum,
-    verify_record,
 )
 from .protocol import refusers as protocol_refusers
 from .topology import Graph, distances, node_sort_key
@@ -93,6 +96,10 @@ class SimulatedNetwork:
         self._next_gid = 1
 
     # ------------------------------------------------------------------
+    def _laying_low(self, round_index: int) -> bool:
+        """Malicioso estratégico imita um honesto nesta rodada."""
+        return malicious_acts_honest(round_index, self.config)
+
     def malicious(self, node_id: str) -> bool:
         return self.profiles.get(node_id) == behavior.MALICIOUS
 
@@ -123,6 +130,11 @@ class SimulatedNetwork:
         reference_gid = self.reference_group().gid
         outcomes: list[GroupRound] = []
         forks: list[Group] = []
+        if leaderless_calibration_round(round_index, self.config):
+            return [
+                self._calibration_in_group(group, round_index, task_id, expected, answers, group.gid == reference_gid)
+                for group in self.groups
+            ]
         for group in list(self.groups):
             outcome, fork = self._round_in_group(group, round_index, task_id, answers, group.gid == reference_gid)
             if oracle_round(round_index, self.config):
@@ -159,7 +171,10 @@ class SimulatedNetwork:
         hops = max((dist[m] for m in reached), default=0)
         responses = {m: answers.get(m) for m in reached}
 
-        attack = behavior.leader_attack(self.profiles.get(leader, ""), self.attacks)
+        leader_profile = self.profiles.get(leader, "")
+        if self._laying_low(round_index):
+            leader_profile = behavior.HONEST
+        attack = behavior.leader_attack(leader_profile, self.attacks)
         prev = group.ledger.head
         record = propose_record(
             state,
@@ -172,13 +187,18 @@ class SimulatedNetwork:
             attack=attack,
             colluders=colluders,
         )
-        cons = weighted_consensus(list(record.responses), state.consensus.weights())
+        cons = choose_weighted(
+            list(record.responses), state.consensus.weights(), cfg.consensus_mode, cfg.consensus_center,
+        )
 
         objective = objective_check(state, record)
+        hash_valid = record.prev_hash == prev and record.hash == canonical_hash(record.content())
+        response_map = record.responses_map() if hash_valid else {}
         votes: dict[str, Vote] = {}
         for node in reached:
-            honest = verify_record(state, record, node_id=node, own_answer=answers.get(node), prev_hash=prev, objective=objective)
-            if self.malicious(node):
+            honest = _verify_record_in_group(state, record, node_id=node, own_answer=answers.get(node), prev_hash=prev,
+                                             objective=objective, hash_valid=hash_valid, responses=response_map)
+            if self.malicious(node) and not self._laying_low(round_index):
                 ok, reason = behavior.malicious_vote(
                     leader_is_colluder=self.malicious(leader),
                     is_auditor=node == auditor,
@@ -228,6 +248,70 @@ class SimulatedNetwork:
         )
         return outcome, fork
 
+    def _calibration_in_group(
+        self,
+        group: Group,
+        round_index: int,
+        task_id: str,
+        expected: Optional[Answer],
+        answers: dict[str, Optional[Answer]],
+        is_reference: bool,
+    ) -> GroupRound:
+        """Rodada de calibração sem líder.
+
+        A tarefa se espalha pelo grafo a partir do primeiro membro do grupo,
+        cada nó responde e o registro grava as respostas e o gabarito. Não há
+        eleição, proposta, voto nem quórum, então não há forja a aprovar. O
+        consenso ponderado da rodada é calculado com a reputação de antes,
+        só para a medida de acurácia; a reputação muda pelo gabarito.
+        """
+        state = group.state
+        members = list(group.members)
+        colluders = {m for m in members if self.malicious(m)}
+        mass = state.power_mass(members)
+        malicious_mass = state.power_mass(colluders) / mass if mass > 0 else 0.0
+
+        dist = distances(self.graph, members[0])
+        reached = [m for m in members if m in dist]
+        hops = max((dist[m] for m in reached), default=0)
+        responses = {m: answers.get(m) for m in reached}
+        cons = choose_weighted(
+            list(responses.items()), state.consensus.weights(),
+            self.config.consensus_mode, self.config.consensus_center,
+        )
+
+        record = calibration_record(
+            prev_hash=group.ledger.head,
+            round_index=round_index,
+            task_id=task_id,
+            expected=expected,
+            responses=responses,
+            consensus=cons.answer,
+        )
+        group.ledger.append(record)
+        apply_record(state, record)
+
+        return GroupRound(
+            gid=group.gid,
+            is_reference=is_reference,
+            members=members,
+            leader=None,
+            auditor=None,
+            bootstrap=False,
+            attack=None,
+            record=record,
+            decision=None,
+            votes={},
+            hops=hops,
+            refusers=[],
+            fork_gid=None,
+            malicious_power_mass=malicious_mass,
+            margin=cons.margin,
+            is_tie=cons.is_tie,
+            oracle="calibration",
+            committed={m: cons.answer for m in members},
+        )
+
     def _oracle(
         self,
         group: Group,
@@ -245,7 +329,14 @@ class SimulatedNetwork:
         )
         rejecters = 0
         if not self.config.defense.oracle_bypasses_quorum:
-            votes = {m: (behavior.malicious_oracle_vote() if self.malicious(m) else True) for m in group.members}
+            votes = {
+                m: (
+                    behavior.malicious_oracle_vote()
+                    if self.malicious(m) and not self._laying_low(round_index)
+                    else True
+                )
+                for m in group.members
+            }
             rejecters = sum(1 for ok in votes.values() if not ok)
             _, _, accepted = tally_quorum(votes, group.state.power.weights())
             if not accepted:
@@ -280,7 +371,10 @@ def leadership_row(
         "auditor_profile": profiles.get(outcome.auditor or "", ""),
         "bootstrap": int(outcome.bootstrap),
         "attack": outcome.attack or "",
-        "outcome": "accepted" if decision and decision.accepted else "voided",
+        "outcome": (
+            "calibration" if outcome.oracle == "calibration"
+            else "accepted" if decision and decision.accepted else "voided"
+        ),
         "objective_reason": decision.objective_reason if decision else "",
         "reason": decision.reason if decision else "",
         "censored_complaints": decision.censored_complaints if decision else 0,
@@ -315,6 +409,10 @@ def log_round(
     mechanism: str,
     initial: float,
     is_test: bool,
+    consensus_mode: str = "exact",
+    audited: bool = False,
+    calibration: bool = False,
+    consensus_center: str = "medoid",
 ) -> None:
     """Grava ``per_node.csv``, ``rounds.csv`` e ``leadership.csv`` da rodada.
 
@@ -323,7 +421,6 @@ def log_round(
     como sem consenso. A maioria simples continua sendo a linha de base sobre
     as respostas de todos os nós.
     """
-    from .consensus import majority_consensus
     from .engine import answer_dispersion
     from .reputation import ReputationUpdate
     from .schemas import RoundResult
@@ -337,7 +434,9 @@ def log_round(
     reference_consensus = committed.get(anchor) if anchor else None
     reference = next((o for o in outcomes if o.is_reference), outcomes[0] if outcomes else None)
 
-    cons_m = majority_consensus([(r.node_id, r.answer) for r in responses])
+    cons_m = choose_baseline(
+        [(r.node_id, r.answer) for r in responses], consensus_mode, consensus_center,
+    )
     result = RoundResult(
         round_index=round_index,
         task_id=task_id,
@@ -404,6 +503,8 @@ def log_round(
         is_tie_weighted=tie_w,
         is_tie_majority=cons_m.is_tie,
         is_test=is_test,
+        audited=audited,
+        calibration=calibration,
     )
     for outcome in outcomes:
         length, head = chains.get(outcome.gid, (0, ""))

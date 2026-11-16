@@ -1,24 +1,5 @@
-"""Orquestrador central (fixo) da rede distribuída.
+"""Coordenador experimental do protocolo de orquestração dinâmica."""
 
-Responsável por, a cada rodada: distribuir a tarefa a todos os nós de forma
-assíncrona (coleta concorrente via ``httpx``), agregar as respostas por consenso
-(ponderado por reputação e por maioria simples), avaliar contra o gabarito,
-atualizar a reputação dinâmica e registrar as métricas.
-
-O laço de rodada é implementado em :mod:`sistema.core.engine` e compartilhado
-com a simulação local, garantindo que os dois caminhos de execução sejam
-estritamente comparáveis (mesma lógica de consenso, atualização e logging).
-
-Topologia: estrela (o orquestrador possui um canal para cada nó).
-
-Com ``orchestration: dynamic`` no YAML o orquestrador vira só o coordenador do
-experimento (:func:`run_dynamic_experiment`): quem conduz cada rodada é o nó
-eleito pela cadeia, falando apenas com os vizinhos.
-
-Uso::
-
-    python -m sistema.orchestrator.run --config sistema/config/experiment.yaml
-"""
 from __future__ import annotations
 
 import argparse
@@ -32,13 +13,12 @@ import yaml
 
 from ..core import dataset as dataset_module
 from ..core.answer import normalize
-from ..core.defenses import preset as defense_preset
-from ..core.engine import process_round
+from ..core.defenses import preset as defense_preset, with_overrides
 from ..core.ledger import RoundRecord
 from ..core.metrics import MetricsLogger, dynamic_summary
 from ..core.network import GroupRound, log_round
-from ..core.protocol import Decision, ProtocolConfig, Vote, oracle_record, oracle_round
-from ..core.reputation import MECHANISMS, ReputationTracker
+from ..core.protocol import Decision, ProtocolConfig, Vote, oracle_record, oracle_round, plan_audits
+from ..core.reputation import ReputationTracker
 from ..core.schedule import DEFAULT_TEST_EVERY, is_test_round, test_rounds_1based
 from ..core.schemas import NodeResponse
 from ..core.topology import build_graph, diameter, max_degree, node_sort_key
@@ -58,6 +38,11 @@ def load_config(path: str) -> dict[str, Any]:
 def load_tasks(config: dict) -> list[dict]:
     source = config.get("dataset", "sample")
     limit = config.get("num_tasks")
+    if source == "task_bank":
+        with open(config["task_bank"], encoding="utf-8") as handle:
+            data = json.load(handle)
+        tasks = [{k: task[k] for k in ("id", "question", "answer")} for task in data["tarefas"]]
+        return tasks[:limit] if limit else tasks
     if source == "gsm8k":
         return dataset_module.load_gsm8k(split=config.get("split", "test"), limit=limit)
     return dataset_module.load_sample(limit=limit)
@@ -66,40 +51,6 @@ def load_tasks(config: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Coleta de respostas via HTTP
 # ---------------------------------------------------------------------------
-
-async def query_node(
-    client: httpx.AsyncClient,
-    node: dict,
-    task: dict,
-    mode: str,
-    timeout: float,
-) -> NodeResponse:
-    """Consulta um nó; falhas e timeouts resultam em resposta ``None``."""
-    payload: dict[str, Any] = {"task_id": task["id"], "question": task["question"]}
-    if mode == "simulation":
-        payload["expected"] = task["answer"]
-
-    profile = node.get("profile", "unknown")
-    try:
-        response = await client.post(f"{node['url']}/infer", json=payload, timeout=timeout)
-        response.raise_for_status()
-        data = response.json()
-        return NodeResponse(
-            node_id=node["id"],
-            task_id=task["id"],
-            answer=normalize(data.get("answer")),
-            latency_ms=int(data.get("latency_ms", 0)),
-            profile=profile,
-        )
-    except (httpx.HTTPError, ValueError):
-        return NodeResponse(
-            node_id=node["id"],
-            task_id=task["id"],
-            answer=None,
-            latency_ms=int(timeout * 1000),
-            profile=profile,
-        )
-
 
 async def wait_for_nodes(
     client: httpx.AsyncClient,
@@ -123,83 +74,6 @@ async def wait_for_nodes(
 # Laço principal
 # ---------------------------------------------------------------------------
 
-async def run_experiment(config: dict) -> dict:
-    nodes: list[dict] = config["nodes"]
-    node_ids = [node["id"] for node in nodes]
-    profiles = {node["id"]: node.get("profile", "unknown") for node in nodes}
-
-    tasks = load_tasks(config)
-    if not tasks:
-        raise RuntimeError("Nenhuma tarefa carregada.")
-
-    rounds = config.get("rounds") or len(tasks)
-    test_every = int(config.get("test_every", DEFAULT_TEST_EVERY))
-    planned_tests = test_rounds_1based(rounds, test_every)
-    mode = config.get("mode", "simulation")
-    timeout = float(config.get("timeout_s", 10))
-    output_dir = config.get("output_dir", os.path.join("sistema", "results", "experimento"))
-
-    mechanism = config.get("reputation_mechanism", "ema")
-    if mechanism not in MECHANISMS:
-        raise ValueError(f"reputation_mechanism deve ser um de {MECHANISMS!r}.")
-    alpha_down = config.get("alpha_down", None)
-    initial = float(config.get("initial_reputation", 0.5))
-
-    tracker = ReputationTracker(
-        node_ids,
-        alpha=float(config.get("alpha", 0.3)),
-        initial=initial,
-        mechanism=mechanism,
-        alpha_down=alpha_down,
-    )
-
-    experiment_id = config.get("experiment_id", None)
-    # Em Docker o diretório de volume pode já existir; usamos overwrite=True.
-    logger = MetricsLogger(output_dir, experiment_id=experiment_id, overwrite=True)
-
-    try:
-        async with httpx.AsyncClient() as client:
-            await wait_for_nodes(client, nodes)
-
-            for round_index in range(rounds):
-                task = tasks[round_index % len(tasks)]
-                expected = normalize(task["answer"])
-                this_is_test = is_test_round(round_index, test_every)
-
-                responses: list[NodeResponse] = await asyncio.gather(
-                    *(query_node(client, node, task, mode, timeout) for node in nodes)
-                )
-
-                result = process_round(
-                    round_index=round_index,
-                    task_id=task["id"],
-                    expected=expected,
-                    responses=list(responses),
-                    tracker=tracker,
-                    logger=logger,
-                    is_test=this_is_test,
-                )
-                _print_round(result, is_test=this_is_test)
-    except BaseException:
-        # CSVs incrementais já têm todas as rodadas concluídas; fecha os streams.
-        logger.close()
-        raise
-
-    config = {**config, "test_every": test_every, "test_rounds": planned_tests}
-    summary = logger.flush(
-        config,
-        tracker,
-        profiles,
-        seed=config.get("seed"),
-    )
-    _print_summary(summary, output_dir)
-    return summary
-
-
-# ---------------------------------------------------------------------------
-# Orquestrador dinâmico: coordenador de experimentos
-# ---------------------------------------------------------------------------
-
 async def _get(client: httpx.AsyncClient, url: str, timeout: float, **params) -> Optional[dict]:
     try:
         response = await client.get(url, params=params or None, timeout=timeout)
@@ -220,6 +94,9 @@ async def _post(client: httpx.AsyncClient, url: str, payload: dict, timeout: flo
 
 def _protocol_config(config: dict) -> ProtocolConfig:
     alpha_down = config.get("alpha_down")
+    audit_mode = config.get("audit_mode", "fixed")
+    audited = plan_audits(int(config.get("seed", 0)), int(config.get("rounds", 20)),
+                          int(config.get("test_every", DEFAULT_TEST_EVERY)), float(config.get("audit_p", 0.1))) if audit_mode == "random" else frozenset()
     return ProtocolConfig(
         signal=config.get("signal", "hybrid"),
         alpha=float(config.get("alpha", 0.3)),
@@ -227,7 +104,20 @@ def _protocol_config(config: dict) -> ProtocolConfig:
         alpha_down=float(alpha_down) if alpha_down is not None else None,
         initial=float(config.get("initial_reputation", 0.5)),
         test_every=int(config.get("test_every", DEFAULT_TEST_EVERY)),
-        defense=defense_preset(config.get("defense", "all")),
+        consensus_mode=config.get("consensus_mode", "exact"),
+        consensus_center=config.get("consensus_center", "medoid"),
+        validation_score=config.get("validation_score", "graded"),
+        malicious_strategy=config.get("malicious_strategy", "always"),
+        honest_rounds=int(config.get("honest_rounds", 5)),
+        audit_mode=audit_mode,
+        audited_rounds=audited,
+        alpha_up=float(config.get("alpha_up", 0.1)),
+        defense=with_overrides(
+            defense_preset(config.get("defense", "all")),
+            calibration_rounds=config.get("calibration_rounds"),
+            consensus_alpha=config.get("consensus_alpha"),
+            oracle_alpha=config.get("oracle_alpha"),
+        ),
     )
 
 
@@ -263,6 +153,7 @@ async def run_dynamic_experiment(config: dict) -> dict:
     planned_tests = test_rounds_1based(rounds, cfg.test_every)
     mode = config.get("mode", "simulation")
     timeout = float(config.get("timeout_s", 60))
+    strict_inference = config.get("inference_mode") in ("gateway", "model")
     output_dir = config.get("output_dir", os.path.join("sistema", "results", "experimento"))
     graph = build_graph(node_ids, config.get("topology", "kregular"), degree=int(config.get("degree", 4)), seed=int(config.get("seed", 0)))
 
@@ -273,7 +164,10 @@ async def run_dynamic_experiment(config: dict) -> dict:
 
     async def read_states(client: httpx.AsyncClient) -> dict[str, dict]:
         got = await asyncio.gather(*(_get(client, f"{urls[n]}/state", timeout) for n in node_ids))
-        return {n: s for n, s in zip(node_ids, got) if s}
+        states = {n: s for n, s in zip(node_ids, got) if s}
+        if strict_inference and len(states) != len(node_ids):
+            raise RuntimeError("Não foi possível consultar o estado de todos os nós.")
+        return states
 
     try:
         async with httpx.AsyncClient() as client:
@@ -306,8 +200,13 @@ async def run_dynamic_experiment(config: dict) -> dict:
                 answers = dict(zip(node_ids, await asyncio.gather(
                     *(_get(client, f"{urls[n]}/answer", timeout, round_index=round_index) for n in node_ids)
                 )))
+                if strict_inference:
+                    missing = [n for n in node_ids if not (answers[n] or {}).get("received")]
+                    if missing or not outcomes:
+                        raise RuntimeError(f"Rodada incompleta: nós sem resposta registrada: {missing}; grupos: {len(outcomes)}")
                 if oracle_round(round_index, cfg):
-                    await _judge(client, urls, await read_states(client), answers, outcomes, round_index, task["id"], expected, cfg, timeout)
+                    await _judge(client, urls, await read_states(client), answers, outcomes, round_index, task["id"], expected, cfg, timeout,
+                                 require_applied=strict_inference)
 
                 states = await read_states(client)
                 after = {n: s["consensus"].get(n, cfg.initial) for n, s in states.items()}
@@ -328,6 +227,9 @@ async def run_dynamic_experiment(config: dict) -> dict:
                     responses=responses, profiles=profiles, reps_before=before, reps_after=after,
                     reference_members=reference_members, outcomes=outcomes, chains=chains,
                     mechanism=cfg.mechanism, initial=cfg.initial, is_test=this_is_test,
+                    consensus_mode=cfg.consensus_mode, consensus_center=cfg.consensus_center,
+                    audited=oracle_round(round_index, cfg),
+                    calibration=cfg.signal != "consensus" and round_index < cfg.defense.calibration_rounds,
                 )
                 _print_dynamic_round(round_index, outcomes, this_is_test)
 
@@ -440,6 +342,8 @@ async def _judge(
     expected,
     cfg: ProtocolConfig,
     timeout: float,
+    *,
+    require_applied: bool = False,
 ) -> None:
     """Entrega o gabarito a cada cópia da cadeia (votado ou direto)."""
     for head, members in _groups_by_head(states).items():
@@ -452,6 +356,8 @@ async def _judge(
         statuses = await asyncio.gather(
             *(_post(client, f"{urls[m]}/oracle", {"record": record.to_json(), "votes": votes}, timeout) for m in members)
         )
+        if require_applied and any(not item or item.get("status") != "applied" for item in statuses):
+            raise RuntimeError(f"Conferência não aplicada em todos os nós: {statuses}")
         status = next((s["status"] for s in statuses if s), "")
         for outcome in outcomes:
             if outcome.leader in members:
@@ -473,16 +379,6 @@ def _print_dynamic_round(round_index: int, outcomes: list[GroupRound], is_test: 
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
-
-def _print_round(result, is_test: bool = False) -> None:
-    status = "OK " if result.consensus_correct else "ERR"
-    test_tag = " | TESTE" if is_test else ""
-    print(
-        f"[{status}] rodada {result.round_index + 1:>3} | tarefa {result.task_id} | "
-        f"esperado={result.expected} | ponderado={result.consensus_weighted} | "
-        f"maioria={result.consensus_majority}{test_tag}"
-    )
-
 
 def _print_summary(summary: dict, output_dir: str) -> None:
     print(f"\n=== Resumo do experimento [{summary['experiment_id']}] ===")
@@ -512,10 +408,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     config = load_config(args.config)
-    if config.get("orchestration", "fixed") == "dynamic":
-        asyncio.run(run_dynamic_experiment(config))
-    else:
-        asyncio.run(run_experiment(config))
+    if config.get("orchestration", "dynamic") != "dynamic":
+        raise ValueError("Somente a orquestração dinâmica é suportada.")
+    asyncio.run(run_dynamic_experiment(config))
 
 
 if __name__ == "__main__":

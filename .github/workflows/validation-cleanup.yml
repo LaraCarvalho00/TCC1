@@ -1,0 +1,58 @@
+name: Reconcile temporary AWS validation hosts
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Optional run ID from launch (gh-RUN_ID-ATTEMPT); blank checks all runs"
+        type: string
+        default: ""
+      terminate_now:
+        description: "Immediately terminate the specified run, even if still running"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: validation-aws-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  RESULTS_BUCKET: ${{ vars.AWS_RESULTS_BUCKET }}
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  reconcile:
+    # Scheduled workflows run only on the default branch. Keep the workflow there.
+    if: ${{ vars.AWS_GITHUB_ROLE_ARN != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: validation-cleanup-${{ github.run_id }}
+      - run: python -m pip install boto3==1.40.72
+      - name: Reconcile completed, terminated or expired runs
+        env:
+          SELECTED_RUN: ${{ inputs.run_id }}
+          TERMINATE_NOW: ${{ inputs.terminate_now }}
+        run: |
+          args=()
+          if [[ -n "$SELECTED_RUN" ]]; then args+=(--run-id "$SELECTED_RUN"); fi
+          if [[ "$TERMINATE_NOW" == "true" ]]; then args+=(--force); fi
+          python infra/aws/control.py cleanup "${args[@]}"
