@@ -152,7 +152,7 @@ def _verify_completed(attempt: Path, cache: Path, nodes: int, rounds: int) -> No
 
 
 def _verify_per_node(attempt: Path, cache_root: Path, nodes: int, rounds: int, run_id: str,
-                     model_revision: str | None = None) -> None:
+                     model_revision: str | None = None, *, model_path: str = "/models") -> None:
     """Every participant, including attackers, must have its own generations."""
     _verify_metrics(attempt, nodes, rounds)
     with (attempt / "rounds.csv").open(encoding="utf-8", newline="") as stream:
@@ -169,7 +169,7 @@ def _verify_per_node(attempt: Path, cache_root: Path, nodes: int, rounds: int, r
             meta = db.execute("SELECT config FROM meta WHERE id=1").fetchone()
         identity = json.loads(meta[0]) if meta else {}
         if (identity.get("node_id") != node_id or identity.get("run_id") != run_id or
-                identity.get("quantization") != "nf4" or identity.get("model") != "/models" or
+                identity.get("quantization") != "nf4" or identity.get("model") != model_path or
                 identity.get("device") != "cuda" or
                 (model_revision is not None and identity.get("revision") != model_revision)):
             raise RuntimeError(f"Cache de {node_id} pertence a outra execução ou nó.")

@@ -1,0 +1,10 @@
+**
+!sistema/
+!sistema/**
+!infra/
+!infra/runpod/
+!infra/runpod/cenarios-completos.json
+sistema/**/__pycache__/
+sistema/results/
+sistema/resultados/
+sistema/models/

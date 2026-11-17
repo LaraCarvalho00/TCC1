@@ -1,0 +1,50 @@
+name: Plan and validate RunPod Terraform
+
+on:
+  pull_request:
+    paths: ["infra/runpod/**", ".github/workflows/runpod-*.yml", "sistema/**"]
+  push:
+    paths: ["infra/runpod/**", ".github/workflows/runpod-*.yml", "sistema/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/runpod/run
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: terraform fmt -check -recursive
+      - name: Install pinned provider
+        working-directory: .
+        run: bash infra/runpod/install-provider.sh
+      - run: terraform init -backend=false -input=false -lockfile=readonly -plugin-dir="$TCC_PROVIDER_MIRROR"
+      - run: terraform validate
+      - name: Check process mapping and dynamic protocol
+        working-directory: .
+        run: |
+          python -m pip install -r sistema/requirements-node.txt -r sistema/requirements-orchestrator.txt boto3==1.40.72
+          python -m sistema.scripts.runpod_worker --check-config
+          python -m unittest sistema.tests.test_runner_containers sistema.tests.test_runner_per_node sistema.tests.test_dedicated_inference sistema.tests.test_dedicated_orchestrator
+          python -m unittest sistema.tests.test_runpod_control
+      - name: Generate simulated two-GPU plan
+        shell: bash
+        run: terraform test -no-color -verbose | tee "$RUNNER_TEMP/runpod-2xa6000-plan.txt"
+      - name: Upload simulated Terraform plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: runpod-terraform-2xa6000
+          path: ${{ runner.temp }}/runpod-2xa6000-plan.txt
+          if-no-files-found: error
+          retention-days: 14

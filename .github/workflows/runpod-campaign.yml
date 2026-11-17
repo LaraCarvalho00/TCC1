@@ -1,0 +1,111 @@
+name: RunPod Qwen campaign
+run-name: "RunPod · ${{ inputs.operation || 'reconcile' }} · ${{ inputs.run_id || github.run_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Launch creates a paid GPU Pod. Status and stop use the existing run ID."
+        type: choice
+        options: [status, launch, stop]
+        default: status
+      run_id:
+        description: "Run ID (gh-...; required for status or stop)"
+        type: string
+      max_hours:
+        description: "Time limit for launch, including loading and upload"
+        type: number
+        default: 48
+  schedule:
+    - cron: "7,17,27,37,47,57 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runpod-campaign-controller
+  cancel-in-progress: false
+
+jobs:
+  control:
+    if: vars.RUNPOD_AUTOMATION_ENABLED == 'true'
+    environment: runpod
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      OPERATION: ${{ inputs.operation || 'reconcile' }}
+      SELECTED_RUN: ${{ inputs.run_id }}
+      MAX_HOURS: ${{ inputs.max_hours || 48 }}
+      MAX_HOURLY: ${{ vars.RUNPOD_MAX_HOURLY_USD || '1.42' }}
+      TCC_S3_ENDPOINT: ${{ vars.RUNPOD_R2_ENDPOINT }}
+      TCC_S3_BUCKET: ${{ vars.RUNPOD_RESULTS_BUCKET }}
+      TCC_STATE_BUCKET: ${{ vars.RUNPOD_STATE_BUCKET }}
+      TCC_REGISTRY_ID: ${{ vars.RUNPOD_GHCR_REGISTRY_ID }}
+      PYTHONPATH: ${{ github.workspace }}
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install boto3==1.40.72
+      - name: Check launch credentials before building
+        if: inputs.operation == 'launch'
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          TCC_S3_ACCESS_KEY: ${{ secrets.RUNPOD_R2_RESULTS_KEY }}
+          TCC_S3_SECRET_KEY: ${{ secrets.RUNPOD_R2_RESULTS_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.RUNPOD_R2_STATE_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RUNPOD_R2_STATE_SECRET }}
+        run: python infra/runpod/control.py preflight
+      - name: Image name
+        if: inputs.operation == 'launch'
+        id: image
+        run: printf 'name=ghcr.io/%s/runpod-qwen\n' "${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+        if: inputs.operation == 'launch'
+      - uses: docker/login-action@v3
+        if: inputs.operation == 'launch'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        if: inputs.operation == 'launch'
+        id: build
+        with:
+          context: .
+          file: infra/runpod/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
+          build-args: CODE_REVISION=${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - uses: hashicorp/setup-terraform@v3
+        if: inputs.operation == 'launch'
+        with:
+          terraform_version: "1.11.4"
+          terraform_wrapper: false
+      - name: Install pinned provider
+        if: inputs.operation == 'launch'
+        run: bash infra/runpod/install-provider.sh
+      - name: Control campaign
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          TCC_S3_ACCESS_KEY: ${{ secrets.RUNPOD_R2_RESULTS_KEY }}
+          TCC_S3_SECRET_KEY: ${{ secrets.RUNPOD_R2_RESULTS_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.RUNPOD_R2_STATE_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RUNPOD_R2_STATE_SECRET }}
+          IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+        run: |
+          if [[ "$OPERATION" == launch ]]; then
+            python infra/runpod/control.py launch --run-id "gh-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+              --image "$IMAGE" --max-hours "$MAX_HOURS" --max-hourly "$MAX_HOURLY"
+          else
+            python infra/runpod/control.py "$OPERATION" --run-id "$SELECTED_RUN"
+          fi

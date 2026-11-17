@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 import hashlib
+import json
 import os
 import random
 import threading
@@ -209,7 +210,7 @@ async def _dedicated_inference(request: InferRequest) -> tuple[Optional[Answer],
         base_id = min(COLLUDERS, key=node_sort_key) if COLLUDERS else NODE_ID
         base = answer
         if base_id != NODE_ID:
-            response = await _http().post(f"{NODE_URL_TEMPLATE.format(id=base_id)}/model_answer", json={
+            response = await _http().post(f"{_node_url(base_id)}/model_answer", json={
                 "run_id": os.environ["MODEL_RUN_ID"], "node_id": base_id,
                 "round_index": request.round_index, "task_id": request.task_id, "question": request.question})
             response.raise_for_status()
@@ -313,6 +314,13 @@ PEERS = _env_list("PEERS")
 NEIGHBORS = _env_list("NEIGHBORS")
 COLLUDERS = set(_env_list("COLLUDERS"))
 NODE_URL_TEMPLATE = os.getenv("NODE_URL_TEMPLATE", "http://{id}:8000")
+NODE_URLS = json.loads(os.getenv("NODE_URLS", "{}"))
+
+
+def _node_url(node_id: str) -> str:
+    if NODE_URLS:
+        return NODE_URLS[node_id]
+    return NODE_URL_TEMPLATE.format(id=node_id)
 PROTOCOL_TIMEOUT_S = float(os.getenv("PROTOCOL_TIMEOUT_S", "60"))
 
 _attacks = behavior.AttackConfig(
@@ -404,7 +412,7 @@ async def _flood(path: str, payload: dict, exclude: Optional[str]) -> list[dict]
     async def send(neighbor: str) -> Optional[dict]:
         try:
             response = await _http().post(
-                f"{NODE_URL_TEMPLATE.format(id=neighbor)}{path}", json={**payload, "sender": NODE_ID},
+                f"{_node_url(neighbor)}{path}", json={**payload, "sender": NODE_ID},
             )
             response.raise_for_status()
             return response.json()

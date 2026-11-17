@@ -36,3 +36,4 @@ sistema/resultados/
 *.tfvars.json
 !*.tfvars.example
 crash.log
+infra/runpod/run/backend_override.tf.json

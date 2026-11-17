@@ -82,7 +82,7 @@ def _dynamic_environment(
     return environment
 
 
-def generate(args: argparse.Namespace) -> None:
+def build_configuration(args: argparse.Namespace) -> tuple[dict, dict]:
     if args.orchestration != "dynamic":
         raise ValueError("Somente a orquestração dinâmica é suportada.")
     dedicated = args.inference_mode == "model" and bool(getattr(args, "model_run_id", ""))
@@ -181,9 +181,6 @@ def generate(args: argparse.Namespace) -> None:
         orchestrator_service["build"] = {"context": ".", "dockerfile": "sistema/orchestrator/Dockerfile"}
     services["orchestrator"] = orchestrator_service
 
-    with open(args.compose_out, "w", encoding="utf-8") as handle:
-        yaml.safe_dump({"services": services}, handle, sort_keys=False, allow_unicode=True)
-
     # Configuração do orquestrador — inclui todos os novos campos.
     config = {
         "mode": args.mode,
@@ -234,11 +231,18 @@ def generate(args: argparse.Namespace) -> None:
             "auditor_attack": args.auditor_attack,
     })
 
+    return services, config
+
+
+def generate(args: argparse.Namespace) -> None:
+    services, config = build_configuration(args)
+    with open(args.compose_out, "w", encoding="utf-8") as handle:
+        yaml.safe_dump({"services": services}, handle, sort_keys=False, allow_unicode=True)
     with open(args.config_out, "w", encoding="utf-8") as handle:
         yaml.safe_dump(config, handle, sort_keys=False, allow_unicode=True)
-
     counts: dict[str, int] = {}
-    for profile in profiles.values():
+    for node in config["nodes"]:
+        profile = node["profile"]
         counts[profile] = counts.get(profile, 0) + 1
     print(f"Gerado: {args.compose_out} e {args.config_out}")
     print(f"Nós ({args.nodes}): {counts}")
