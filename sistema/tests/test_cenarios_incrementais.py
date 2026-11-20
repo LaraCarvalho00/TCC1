@@ -31,6 +31,14 @@ class CenariosIncrementaisTest(unittest.TestCase):
         self.assertEqual(len(jobs), 20)
         self.assertEqual({job["etapa"] for job in jobs}, {4, 5, 6, 7})
 
+    def test_recorte_n20s5_tem_cem_execucoes(self):
+        jobs, spec = incremental.trabalhos("n20s5")
+        self.assertEqual(spec["nos"], 20)
+        self.assertEqual(spec["rodadas"], 50)
+        self.assertEqual(spec["sementes"], (0, 1, 2, 3, 4))
+        self.assertEqual(len(jobs), 100)
+        self.assertEqual(len({job["id"] for job in jobs}), 100)
+
     def test_recorte_isabela_tem_cento_e_setenta_e_cinco(self):
         jobs, spec = incremental.trabalhos("isabela")
         self.assertEqual(spec["nos"], 50)

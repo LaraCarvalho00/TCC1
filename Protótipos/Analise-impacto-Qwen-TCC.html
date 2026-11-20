@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Impacto de trocar SmolLM3-3B por Qwen3-0.6B no TCC</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      color: #1a1a1a;
+      font-size: 11pt;
+      line-height: 1.45;
+      margin: 0;
+    }
+    h1 { font-size: 18pt; margin: 0 0 6pt; line-height: 1.2; }
+    h2 { font-size: 13.5pt; margin: 18pt 0 8pt; border-bottom: 1px solid #ccc; padding-bottom: 3pt; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 12pt 0 6pt; page-break-after: avoid; }
+    p { margin: 0 0 8pt; }
+    .kicker { font-size: 9.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4pt; }
+    .meta { font-size: 9.5pt; color: #444; margin-bottom: 14pt; }
+    .lead { font-size: 11.5pt; }
+    .box {
+      border: 1px solid #c9c9c9;
+      background: #f6f6f6;
+      padding: 10pt 12pt;
+      margin: 10pt 0 14pt;
+      page-break-inside: avoid;
+    }
+    .warn { background: #fff8e8; border-color: #e0c070; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8pt 0 12pt; }
+    th, td { border: 1px solid #ccc; padding: 5pt 6pt; vertical-align: top; text-align: left; }
+    th { background: #efefef; font-weight: 600; }
+    .nums td:not(:first-child), .nums th:not(:first-child) { text-align: right; }
+    ul, ol { margin: 4pt 0 10pt 18pt; padding: 0; }
+    li { margin-bottom: 4pt; }
+    .small { font-size: 9pt; color: #555; }
+    .grid { display: flex; gap: 8pt; margin: 8pt 0 12pt; }
+    .card { flex: 1; border: 1px solid #ccc; padding: 8pt 10pt; page-break-inside: avoid; }
+    .card strong { display: block; margin-bottom: 4pt; }
+    footer { font-size: 8.5pt; color: #666; margin-top: 18pt; }
+  </style>
+</head>
+<body>
+  <p class="kicker">TCC · Engenharia de Software · PUC Minas</p>
+  <h1>Impacto de trocar SmolLM3-3B por Qwen3-0.6B</h1>
+  <p class="meta">
+    Allan Mateus de Souza Arruda e Lara Andrade Carvalho<br>
+    Análise a partir do artigo de 15 páginas (1º de novembro de 2026),
+    da campanha Mac de 20 nós (17/11/2026) e das execuções Windows/NF4 (16/11/2026).
+  </p>
+
+  <div class="box warn">
+    <p class="lead" style="margin:0"><strong>O que a banca precisa ouvir primeiro.</strong>
+    O protocolo (medoide, reputação, conferência por sorteio) continua o objeto do TCC.
+    Qwen <em>não</em> substitui os 3.670 ensaios Smol do artigo. Ele é uma condição extra, mais barata, com LLM mais fraca no GSM8K.
+    Os 74,6% de acurácia com 50% de maliciosos no artigo <strong>não se transferem</strong> para o Qwen.</p>
+  </div>
+
+  <h2>1. Como o sistema funciona</h2>
+  <p>Em cada rodada todos os nós recebem a <strong>mesma questão</strong>.</p>
+  <ol>
+    <li>Papéis (orquestrador e auditor) são escolhidos pelo <strong>poder</strong>.</li>
+    <li>Honestos publicam a resposta da LLM (no artigo: um sorteio do banco Smol já gerado).</li>
+    <li>Maliciosos, depois das cinco primeiras rodadas, distorcem uma base com distância δ = 0,2 e <strong>conluio</strong> (todos enviam o mesmo valor adulterado).</li>
+    <li>O orquestrador escolhe o <strong>medoide ponderado pela reputação de consenso</strong>: a resposta recebida que minimiza a distância pesada.</li>
+    <li>O <strong>quórum</strong> usa o poder, não a reputação de consenso. Empate não aprova.</li>
+    <li>Se a rodada for sorteada para conferência, o <strong>gabarito GSM8K</strong> corrige reputação <em>sem trocar</em> o número já gravado.</li>
+  </ol>
+  <p>Há duas “largadas” distintas, que não devem ser confundidas na apresentação:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Mecanismo</th>
+        <th>O que faz</th>
+        <th>Artigo (sorteio p = 0,2)</th>
+        <th>Qwen Mac p = 0,2</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cinco rodadas honestas</td>
+        <td>Malicioso imita honesto; ainda gera a LLM</td>
+        <td>Sim (seção 4.3)</td>
+        <td>Sim (<code>--honest-rounds 5</code>)</td>
+      </tr>
+      <tr>
+        <td>Calibração das 3 primeiras</td>
+        <td>Gabarito atualiza R e P; sem líder/voto</td>
+        <td>Não nessa série; só no calendário fixo (4.4 e 4.6)</td>
+        <td>Não. Sinal <code>consensus</code>: coluna <code>calibration = 0</code></td>
+      </tr>
+      <tr>
+        <td>Conferência por sorteio</td>
+        <td>Gabarito após a decisão, probabilidade p por rodada elegível</td>
+        <td>Sim, 45 elegíveis, p = 0,2</td>
+        <td>Sim, auditoria aleatória com p = 0,2</td>
+      </tr>
+      <tr>
+        <td>Tarefas das rodadas 1–5</td>
+        <td>GSM8K test 0–4, na ordem</td>
+        <td>Smol sorteado do banco</td>
+        <td>Qwen gera na hora; gabarito GSM8K</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="box">
+    <p style="margin:0"><strong>Resposta direta sobre “validação inicial do dataset da LLM”.</strong>
+    As primeiras rodadas do Qwen são as mesmas questões GSM8K, com respostas geradas pelo próprio Qwen.
+    Não há um bloco separado de “validar o modelo e só depois ligar a rede”.
+    A calibração com gabarito nas três primeiras (gênese) <strong>não rodou</strong> no Qwen Mac, porque a série comparável do artigo também não a usa quando a conferência é por sorteio.
+    As cinco rodadas iniciais <strong>não são</strong> a gênese: são cooperação do atacante.</p>
+  </div>
+
+  <h2>2. O dataset: GSM8K foi usado no Qwen?</h2>
+  <p><strong>Sim, como conjunto de tarefas.</strong> Não como “benchmark oficial do Qwen3”.</p>
+  <p>O arquivo <code>banco_smol.json</code> (SHA-256 <code>a376d3c…b2afb</code>, o mesmo do artigo) contém:</p>
+  <ol>
+    <li>as 50 primeiras questões de <strong>teste</strong> do GSM8K;</li>
+    <li>o <strong>gabarito numérico oficial</strong>;</li>
+    <li>20 amostras <strong>Smol</strong> por questão (1.000 saídas; 74% de acerto no artigo).</li>
+  </ol>
+  <p>Na campanha Qwen Mac (<code>qwen-mac-20nos-p20-20261117</code>):</p>
+  <ul>
+    <li><code>--task-bank</code> aponta para esse banco;</li>
+    <li>cada nó <strong>gera de novo</strong> com Qwen3-0.6B MLX 4 bits;</li>
+    <li>o prompt <strong>não</strong> inclui o gabarito;</li>
+    <li>as 1.000 respostas Smol <strong>não entram</strong> na agregação.</li>
+  </ul>
+  <p>O dataset no sentido de <em>problema + resposta certa</em> é GSM8K. O dataset no sentido de <em>saídas do Smol</em> não foi aplicado ao Qwen. As rodadas 0–4 usam <code>gsm8k-test-0</code> a <code>gsm8k-test-4</code> com gerações Qwen.</p>
+
+  <h2>3. Três camadas que não podem ser misturadas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Camada</th>
+        <th>Modelo</th>
+        <th>Como responde</th>
+        <th>Escala</th>
+        <th>Papel na banca</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Artigo (seções 4–5)</td>
+        <td>SmolLM3-3B</td>
+        <td>Sorteio das 1.000 saídas já geradas</td>
+        <td>50 nós, 50 rodadas, 5 sementes, 3.670 execuções</td>
+        <td>Resultado principal do TCC</td>
+      </tr>
+      <tr>
+        <td>Mac 17/11</td>
+        <td>Qwen3-0.6B MLX 4 bits</td>
+        <td>Inferência nova a cada rodada</td>
+        <td>20 nós, 50 rodadas, p = 0,2, 5 sementes, 40 cenários</td>
+        <td>Prova de viabilidade e comparação de modelo</td>
+      </tr>
+      <tr>
+        <td>Windows 16/11</td>
+        <td>Qwen3-0.6B NF4</td>
+        <td>Inferência nova; 5 modelos compartilhados</td>
+        <td>50 nós, 1 semente, 2 cenários completos</td>
+        <td>Piloto de custo; não fecha a matriz</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">MLX 4 bits no Mac não é NF4 no Windows. Tempo e acerto desses dois Qwen não isolam só o modelo.</p>
+
+  <h2>4. Números que sustentam a diferença</h2>
+  <h3>4.1 Acerto bruto da LLM</h3>
+  <table class="nums">
+    <thead>
+      <tr><th>Medida</th><th>Valor</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Banco Smol no artigo (1.000 saídas)</td><td>74,0%</td></tr>
+      <tr><td>Qwen Mac, 20 nós, 40.000 gerações, 5 sementes</td><td>32,1%</td></tr>
+      <tr><td>Qwen Windows, 50 nós, 1 semente, primeiro cenário completo</td><td>36,56% (914/2.500)</td></tr>
+      <tr><td>Comparativo descritivo 100 tuplas (Windows, arquiteturas diferentes)</td><td>Smol 79/100 · Qwen 34/100</td></tr>
+    </tbody>
+  </table>
+  <p>Honestidade significa seguir o protocolo, não acertar a conta. Com Qwen, o honesto erra a maioria das questões; o consenso herda esse teto.</p>
+
+  <h3>4.2 Consenso na fase de ataque — Qwen Mac, p = 0,2</h3>
+  <p class="small">Média de cinco sementes. Exclui as cinco rodadas iniciais, as auditadas e as de calibração. Fonte: <code>qwen-mac-20nos-p20-20261117/graficos/LEIA-ME.md</code>.</p>
+  <table class="nums">
+    <thead>
+      <tr><th>Maliciosos</th><th>Nota exata</th><th>Nota graduada</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>20%</td><td>40,9%</td><td>41,5%</td></tr>
+      <tr><td>40%</td><td>30,0%</td><td>22,2%</td></tr>
+      <tr><td>60%</td><td>9,3%</td><td>3,5%</td></tr>
+      <tr><td>80%</td><td>2,3%</td><td>0,0%</td></tr>
+    </tbody>
+  </table>
+  <p>A nota graduada piora o consenso quando o conluio cresce — o mesmo padrão qualitativo do artigo (crédito a um erro próximo).</p>
+
+  <h3>4.3 Artigo Smol — conluio, δ = 0,2, nota exata (Tabela 2)</h3>
+  <p class="small">50 nós, banco Smol 74%, cinco sementes. Não é a mesma escala que o Mac de 20 nós.</p>
+  <table class="nums">
+    <thead>
+      <tr><th>Maliciosos</th><th>Sem conferência</th><th>Sorteio p = 0,2</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>36% (18 nós)</td><td>76,8%</td><td>82,7%</td></tr>
+      <tr><td>50% (25 nós)</td><td>9,2%</td><td>74,6%</td></tr>
+      <tr><td>64% (32 nós)</td><td>9,2%</td><td>61,4%</td></tr>
+      <tr><td>80% (40 nós)</td><td>9,2%</td><td>40,3%</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4 Leitura honesta</h3>
+  <p>Com Smol forte (74% no banco), o consenso com sorteio ainda segura 74,6% em 50% de conluio. Com Qwen ~32% bruto, o consenso Mac em 20% de maliciosos fica perto de 41% — há ganho de agregação, mas o teto cai porque os honestos erram mais. Em 60–80% o Qwen Mac colapsa (9,3% e 2,3% na nota exata).</p>
+  <p><strong>Isso não prova</strong> que “Qwen quebra o protocolo”. Prova que o protocolo herda a qualidade da referência honesta. Também não prova equivalência 20 nós ↔ 50 nós, nem MLX ↔ NF4, nem que 79/100 vs 34/100 isole só o tamanho do modelo.</p>
+
+  <h2>5. Validação contra o texto do TCC</h2>
+  <table>
+    <thead>
+      <tr><th>Trecho do artigo</th><th>Se a banca for “só Qwen”</th><th>Como falar</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Respostas honestas: 1.000 saídas Smol (resumo e 4.1)</td>
+        <td>Falso para a campanha Qwen</td>
+        <td>Manter como método do artigo; Qwen em extensão / apêndice</td>
+      </tr>
+      <tr>
+        <td>74% do banco; 74,6% com 50% e p = 0,2</td>
+        <td>Não reproduzido no Qwen</td>
+        <td>Não colar esses números em gráfico Qwen</td>
+      </tr>
+      <tr>
+        <td>Simulação sem inferência nova (seção 6)</td>
+        <td>Qwen viola essa limitação de propósito</td>
+        <td>Vantagem: Qwen mede inferência real; declarar custo e escala</td>
+      </tr>
+      <tr>
+        <td>GSM8K, 50 primeiras de teste</td>
+        <td>Mantido no Qwen</td>
+        <td>Dataset de tarefas é o mesmo; o gerador mudou</td>
+      </tr>
+      <tr>
+        <td>Calibração só no calendário fixo</td>
+        <td>Qwen Mac (sorteio) coerente: sem calibração</td>
+        <td>Não vender as 5 rodadas honestas como gênese</td>
+      </tr>
+      <tr>
+        <td>Trabalhos futuros: testar outros modelos (seção 7)</td>
+        <td>Qwen é exatamente isso</td>
+        <td>Enquadrar como extensão, não como retratação do artigo</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. O que os documentos de comparação acrescentam</h2>
+  <p>O PDF <em>comparacao-llms-tcc.pdf</em> (17 figuras) coloca Smol e Qwen <strong>os dois</strong> em MLX 4 bits, 20 nós, p = 0,2, cinco sementes. Essa é a comparação mais limpa de modelo: Smol fica acima em acerto bruto, consenso, maioria e nós honestos; Qwen é mais rápido porque gera em lote de 20, enquanto Smol soma 20 consultas seriais. O tempo <strong>não</strong> isola só o modelo.</p>
+  <p>O Windows NF4 (50 nós, cinco modelos compartilhados) serve para custo. Com uma semente e dois cenários completos, não fecha a matriz do artigo nem substitui a Tabela 2.</p>
+
+  <h2>7. Impacto para a apresentação final</h2>
+  <div class="grid">
+    <div class="card">
+      <strong>Pode defender</strong>
+      Reputação + medoide + gabarito secreto reduz o dano do conluio quando a LLM honesta é razoavelmente boa. Qwen barato mostra o mesmo mecanismo, com teto mais baixo.
+    </div>
+    <div class="card">
+      <strong>Tem de declarar</strong>
+      Troca de gerador, quantização, 20 vs 50 nós, 1 vs 5 modelos, pré-gerado vs ao vivo. Custo motivou o Qwen; qualidade GSM8K caiu. Uma semente no Windows não fecha variância.
+    </div>
+    <div class="card">
+      <strong>Não diga</strong>
+      “Usamos Qwen, então os 74,6% continuam.” “GSM8K mede Qwen3 como no paper da Alibaba.” “Calibração inicial rodou no Qwen.” “NF4 e MLX são o mesmo experimento.”
+    </div>
+  </div>
+
+  <p>Recomendação de fala: deixar o artigo como está nos números Smol; tratar Qwen como extensão de viabilidade (custo de 50×50 no servidor), não como retratação. Se Qwen entrar no texto final, o lugar natural é a seção 7 ou um apêndice: mesmas 50 questões GSM8K, inferência na rodada, acerto bruto ~32%, consenso que ainda ajuda em 20–40% de maliciosos e colapsa em 60–80% nesta escala de 20 nós.</p>
+
+  <h2>8. Fontes conferidas</h2>
+  <ul>
+    <li>PDF do TCC, 15 páginas, 1º de novembro de 2026.</li>
+    <li><code>comparacao-llms-tcc.pdf</code> — gráficos 20 nós, MLX, p = 0,2.</li>
+    <li>Pasta <code>qwen-mac-20nos-p20-20261117</code> (manifesto, <code>LEIA-ME.md</code>, CSVs).</li>
+    <li>Auditoria Windows em <code>resultados/llm/impacto-qwen-20261116</code>.</li>
+    <li>Hash do banco de tarefas: <code>a376d3cfc75c844270456d831a3f63f1c7766fbf250ae1e0ddade4d8f8cb2afb</code>.</li>
+  </ul>
+
+  <footer>
+    Documento gerado para apoio à banca. Não altera o artigo nem os resultados brutos.
+    Não interpreta 32% vs 74% como efeito causal isolado do número de parâmetros.
+  </footer>
+</body>
+</html>

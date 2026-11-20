@@ -43,6 +43,13 @@ RECORTE_N20 = {
     "nos": 20,
     "rodadas": 50,
 }
+RECORTE_N20S5 = {
+    "fracoes": (0.0, 0.2, 0.4, 0.8),
+    "ps": (0.2,),
+    "sementes": tuple(range(5)),
+    "nos": 20,
+    "rodadas": 50,
+}
 RECORTE_ISABELA = {
     "fracoes": (0.0, 0.2, 0.4, 0.6, 0.8),
     "ps": (0.1, 0.2),
@@ -88,9 +95,11 @@ def spec_recorte(nome: str) -> dict:
         return dict(RECORTE_TCC)
     if nome == "n20":
         return dict(RECORTE_N20)
+    if nome == "n20s5":
+        return dict(RECORTE_N20S5)
     if nome == "isabela":
         return dict(RECORTE_ISABELA)
-    raise ValueError("Recorte deve ser tcc, n20 ou isabela")
+    raise ValueError("Recorte deve ser tcc, n20, n20s5 ou isabela")
 
 
 def trabalhos(nome: str) -> tuple[list[dict], dict]:
@@ -383,7 +392,7 @@ def executar(saida: Path, *, recorte: str, llm: str, tarefas: Path, workers: int
             "chamadas_unicas_previstas": 0 if fonte == "banco" else unicas,
             "banco_acerto": bruto,
             "observacao": (
-                "Honestos sorteiam uma das 20 respostas pré-geradas do Smol; sem LLM nesta série."
+                f"Honestos sorteiam uma das 20 respostas pré-geradas ({spec.get('modelo_nome', llm)}); sem LLM nesta série."
                 if fonte == "banco" else
                 "Cada nó gera na hora; o SQLite compartilhado evita repetir a mesma semente."
             ),
@@ -463,7 +472,7 @@ def executar(saida: Path, *, recorte: str, llm: str, tarefas: Path, workers: int
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--planejar", action="store_true")
-    parser.add_argument("--recorte", choices=("tcc", "n20", "isabela"), default="tcc")
+    parser.add_argument("--recorte", choices=("tcc", "n20", "n20s5", "isabela"), default="tcc")
     parser.add_argument("--llm", choices=tuple(MODELOS), default="smol")
     parser.add_argument("--tarefas", type=Path, default=TAREFAS_PADRAO)
     parser.add_argument("--saida", type=Path)
