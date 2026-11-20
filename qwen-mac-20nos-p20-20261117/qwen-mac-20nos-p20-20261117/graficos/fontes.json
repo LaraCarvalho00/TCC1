@@ -1,0 +1,482 @@
+[
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s0/tentativa-0001/rounds.csv",
+    "sha256": "b0558a4be3e6835833dc6804be6813c05ef7c5ee9ad6bd15fda442a512e72bce"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "4190cb614bdd69a16aac2199646ef43b5500eb5d07a03d7f189ab59e60cc9b95"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "d53b3d3f11ccd4f10e095e7a31070749fe93b297d7e7eb15f8bf194ac818d072"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s1/tentativa-0001/rounds.csv",
+    "sha256": "b1f9e8b4dd7413bd1e7de91e45feae2dbc1be6d3d94decb879a6c0b61e539048"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "273064cb148eb9d5cb216d7809aece554316904402e199b7935d870cd82c7352"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "ae12ede30a136fb8b45a1744b751dd9f0a0510bc86c03b89d355d75ee6288096"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s2/tentativa-0001/rounds.csv",
+    "sha256": "d1f23c228713ada350eff01cdbe325bfb039d908a54e1940c2c7621551fcaca1"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "eef15dc07a84755977cf7ec60c594d1a97c0a0b2a5bc3794fa222af3dc31a306"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "ffaa1b0f063153c38c9caeaaec63abfc824bec6a804eac03120037e1e89eac16"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s3/tentativa-0001/rounds.csv",
+    "sha256": "1e06d3c20e9cee4139bd6a17007ef1b2e8f6abdfdeebdf9d594f940bb62f5e9b"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "221076e83198a123152e2e16bf28a990c2ecb38f6d73d63aa0dcaa91f239caaa"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "8a5e318ac428ab10e9c64823a320e2dd77afa42254bf07dd8305615baf4d985d"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s4/tentativa-0001/rounds.csv",
+    "sha256": "829e2dac55cfe5811f84c5242825f728ed9894b340536e1fa39760cd25bbb392"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "fe33b2f6d0d6c69647028fb647a5edfb9b9fa921e9ffecd041b3f4bf03f237cb"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-exact-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "ff509239ed22944dc16bf87b916840d5e7dbd1a034bf49b722f36a2c537494dd"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s0/tentativa-0001/rounds.csv",
+    "sha256": "97b7bd3ce34eab2ed83be234b772cced163192ef088034dc0bc3aa67b2841ed8"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "fac6c7f72b3df235c148e0e8fa240ca22c335a51e3ab29a56de255fa66d3f2b4"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "d7635ac5ce1664ec05d8c02a4799e3320e8f926428463e0c33ea83fe3db7b5c6"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s1/tentativa-0001/rounds.csv",
+    "sha256": "01e86690715542a4b48ef31aecdb2c83005331fffac80060cdc3bd558143cd37"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "f82aa0f02f747b11150a3af64440712775b5af27cb51d8eb185daf2e210809c3"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "54b62183ac9a4d5669ac93c3e20d8a39b63ba060ea79a3d76c52b9fd829ed599"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s2/tentativa-0001/rounds.csv",
+    "sha256": "8abe8c0291e8b0cffb3404e7da19ddc88a4f0644b52c6c8ab80367a32a2820a3"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "a25cc5c7a1d58af1ddbfc9a145f2a7e56aa6eb26fbf4f7acd1f418f61ccd70fc"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "fe8311c52e19c7be48406a3aa3cc0575b5e75aa13d0d9395e647cae51d121d67"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s3/tentativa-0001/rounds.csv",
+    "sha256": "88edc0d86994eed285ded7a929ae9298de99ffa0eb4480ba6656749d2b85a724"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "6eac8680cb681655ed54115bdb9b5984e297c2705c14613a715ad9bc80143bd2"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "a3ce1028400e02b41b32ac2e443d9bb99c61b638c19869777979f81507dacdae"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s4/tentativa-0001/rounds.csv",
+    "sha256": "c11563a926fa153e7d9c05202ff5fb9f6d737066b5a97f95ac9e7aeeeffaa584"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "81c0ea1505799ea670ebc9ddbda434e4ebd0a70cee69d1ef93fa8dfe810c4574"
+  },
+  {
+    "path": "cenarios/n20-r50-m20-p20-graded-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "a18e823e15abac35a339604e8ac1cb12ea0643c840a1754f80d815de546598de"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s0/tentativa-0001/rounds.csv",
+    "sha256": "22ae291fca2a58247e7a92319ece0a3191191e0a47c9c567814774942d0fee86"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "3d64dc43d9cfea9dbe513eb0cc99bf80c34145f916eaa8a83971d878b98fe2bb"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "0bf4c6911ebea02bf1178ccbd2844aeae90a4b8c8cd993fd6a7868850b170fe0"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s1/tentativa-0001/rounds.csv",
+    "sha256": "1e0dc33ecfc03322ad3f339f0f06a9ac1a5f6b8165fc4d51d31d41e822b49522"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "574e3ac126e583e7ec0925d926bf4b13cc33a001780dddcf502b24cc0b63da17"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "a34706b5a160d4ab1b3c3ce3955550cdb56a9d8a9c5b70e1d179ce79c21fe53d"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s2/tentativa-0001/rounds.csv",
+    "sha256": "11d01fc3dc6bf4f7ed50798dc764f2978a1c817dfe398adb0d3c8cee25b9e0bf"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "c7f783e6c0a36dae6416cf25ac8e07695414773bf3cc0498c0fe07cb56d8dd09"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "b992182d812707eb3aba1ba17eb42e14a7ee9f153b268c397133c9af4c93d702"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s3/tentativa-0001/rounds.csv",
+    "sha256": "fd9b559196f11fa231bd49ab089796808ddc3842301b2265c04438589f7882ac"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "a7413f3d05aee2b1aa0bf49c83d026c3d7f30649d51c282a430d6e395ff0e910"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "0f96f82cf898e76d7a26e200c7ce1f6d5f50e7c59b5caf5183611b0790279892"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s4/tentativa-0001/rounds.csv",
+    "sha256": "beb09ab9430287a68392698b89a7d5f96aca9f48c9ec54702e8dd0c5397ef0f2"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "f228000569dbde363f279871ddf5358dd285a623dd620ffcf5e9095cbc5a2a45"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-exact-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "6cefbc293257a69457a0de58b51368705fca1c1e6593478ed7692dff2562bb50"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s0/tentativa-0001/rounds.csv",
+    "sha256": "9499b91883b962754978004623fcde74b682762a012e185498c68046c8930635"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "c731c41c97a613ae7490ec7cb6250ffefd5d36ed630321a39b0037255cb7a03e"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "18e9204def3e114acf41339d4b0258f416dea3bdd83e34650350a5acc874c6e5"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s1/tentativa-0001/rounds.csv",
+    "sha256": "b6b8040aaa90c12c1421896ce69247c4aef870be406e6443650091d6967327fd"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "a921ab928147189307c970159539e5d03035b0dd7ca3a6733c75b53854e7fbb7"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "2d80a5256468708a91ce381e53712ac1baed08df8ca65a0cc7a36f8488fe1eb2"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s2/tentativa-0001/rounds.csv",
+    "sha256": "529ab7af770d00b711305178fdf6bf44b3f75c20e9ef035b7948a96d5fd88a5f"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "6b56f4151edbe6db15d19e9a9c209f09716bedbcfcac913912941e8fec9f3962"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "e0a5bc37933e7a59dea1254e96b843452458b50436802d95b3da7c327e95ec96"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s3/tentativa-0001/rounds.csv",
+    "sha256": "dc3edcd091e406fc1d2dfd0d5740ca196fe3e223eaff55e214339969fa81f80c"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "620dbc8d44a79c17c6ff65092c28d0eb28595b826b739f7783510169e8befbd4"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "8f6d2c553a3ebfd4980c3864cdc29c74f7ca28936bf615e8a17d466b5c4084e0"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s4/tentativa-0001/rounds.csv",
+    "sha256": "c990cca9c7ca1253435a64e67d82681f77b7e919053b0ecb64d649516d5c8aa8"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "ea77d7f3ea9313cec6424e46e3d124f6955613724bad0b04a9a182e7aa7d5a75"
+  },
+  {
+    "path": "cenarios/n20-r50-m40-p20-graded-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "f856fa4b93591339cb4eb317aae974fb6f17f2eaf8f0a3accb9687e0823cdcfc"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s0/tentativa-0001/rounds.csv",
+    "sha256": "58a91a56b8a7d32b17eee65beac325aafc2a21383d25a9c5787ca7ae1d89ed1b"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "54d2663928df01dbca008f69d105bed86dcbbb14a1581a0e549149b6fffbb477"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "aa9ed2112091a643a637c6f20f54e5858e2e52e7748628c9151afd3513181a90"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s1/tentativa-0001/rounds.csv",
+    "sha256": "b8e86e4c4b10c785cd8716ef279fa2f2f819d9373c027173df728ed1fd5b20e7"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "18bca33993424dff013583a2bda6605d0059fa19402536ddad2fc849bed547c5"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "3fd32aba4d055f6d3d24fdfd1cfbd8252d3abab6576fa0c8dac3f65f9e868f80"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s2/tentativa-0001/rounds.csv",
+    "sha256": "c1396b2df0a56f3942df5fda7c7400ee3bd4dc1d01868413508698dbd6ed438e"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "c95369901c75a86325d1dff8e339d0a0c9341f78b625b00235a6e96b67f95668"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "e07de56da1f6d6beef9d7ad067103e3ceb6e9b753cf7181868bf01016b7dc50e"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s3/tentativa-0001/rounds.csv",
+    "sha256": "05ed4a1f5d1e1ac62fbd539f3d34223023ad284b804661b02c661e96dbbd4828"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "84f977239864ed3741be97877a600a57ffe3f50889d7c2ea1b31fb252a4ab7ab"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "7151aec51a933ffbdd548c7ad3a820a0beb09b15f76fad5ff808c0904188a195"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s4/tentativa-0001/rounds.csv",
+    "sha256": "a3e64f1dc68d0bfd720d6cc72a5afee3e5814f1cc9bcd63b578cc922df3fcce9"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "5c2fff09551d087413f5efc4739e185e0eeb63eaf7aaa93028faf9ae6103ba3c"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-exact-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "9be4f30e3bb40259eed046fbd922b3ed381a128148f823e65200d51d45a68be9"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s0/tentativa-0001/rounds.csv",
+    "sha256": "058517e178481d18f87066c56df1f032b746b985edc3f54c04e0c145aa2e01ca"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "e49a7ab8d45a413e90211b5a663935d3a869f7be69f501fa516c94edb6382d38"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "43753e0bb4cac6f14e264793c69bd97e1275ed6fb9d08ff0ce9f7a06b1a4b8d3"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s1/tentativa-0001/rounds.csv",
+    "sha256": "3f7dacd7a610b81452a9fc0bef838803f4ae1fbd7c609e68c3c218a26a35e43d"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "6599b57b64c631b18398ba5c4f154bd0072eea632f055b357de89992b3d0c201"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "d0ce95a4c259efddf2c066fd760bd12ae89050d2b6a9d0b8893244b58a35519b"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s2/tentativa-0001/rounds.csv",
+    "sha256": "984d0596364261e8bb0da48a190f46ba8100f0a46ccb297f5d60f1c261b17dd5"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "9fed3c18d5310a725bdd465d7cb935772634abc037d131a425160793ae5273a0"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "ca4a917e0484f0b8dcc8964eb55937b7290588a0cca02ec1a200f572391e4997"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s3/tentativa-0001/rounds.csv",
+    "sha256": "73ef2bf48493907b39e9a92d5283e5c05283d7645dfd5b3fb88105236dc9e831"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "8679e452508c2bd5cc603437bf2e80058bd0e6fb3b1cec1bcf0cd4f9fadab4e6"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "fdf41f267d86b56a23d3547757a0308f96e703424469337ed8eef9ff673c8bc4"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s4/tentativa-0001/rounds.csv",
+    "sha256": "5ad208f95effc19bddb56125e2f83dd171f407453d9f883d6faf6af362f41a2f"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "45b7cdb8dd1a83a098d7996b56370b3e8bea747f9b1163cfd53cc15ff4beeed5"
+  },
+  {
+    "path": "cenarios/n20-r50-m60-p20-graded-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "0cafdacd3d70676eedef948c90f97a897ffce38974ce28faa99a5e0e14fd787e"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s0/tentativa-0001/rounds.csv",
+    "sha256": "c5c64590d7ab082f2cac40d5a95fc1e83ef4a1c0160639052cf14b95e03e9195"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "76e11d10b039462e7b9313987f872468c74d1d8168ebad9aeb930b08791e6454"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "3a3828565ab93b5f9da3fa5513fdeba344fc88cfccd12c6824d5cbef0b874327"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s1/tentativa-0001/rounds.csv",
+    "sha256": "a339a035d4aef32389ccd410618b0ed6aa03522a52b363388167aaaf0a40bc6b"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "c7858360b076da20cb18ef9dce59b461222c722a16acea0c4c4c730edc11d7d0"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "1ae76a79f87724a8af02ba86c8421524dfa7f5ac2373d6fba2f6c5f41fcdf6f7"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s2/tentativa-0001/rounds.csv",
+    "sha256": "6ea4377155b2196b7f34277da9e922752ecbf4a03fe0a4e46396a2a73d172f4f"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "8d87706974100032594c7668ef1d3205aa82489e591e4e91270581bf79d86739"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "8394bedf0ef65dbcc902712a3eddf3fa888211f6dab5115599b39c76efe67788"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s3/tentativa-0001/rounds.csv",
+    "sha256": "2c4f9a9af7fe3733b28c5210f1a9847a8759157ede6277cdc1543b438bb2ca5e"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "ee72e1aa0424dd5bb1522d4cb90ff6d765473fd3e0628b83680f1e55b5c0235f"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "f0520e72d388dc82c4173a7a9502e85b9446238ea974cb7c80f5f8cf75f92f35"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s4/tentativa-0001/rounds.csv",
+    "sha256": "13c477b3bd0bf0955ef86c1c6a8a879100e8a0111fe91fb5a7c850b54693a6e9"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "8ebd019641dc87847e39063f7ea14b8039b0a0728e07112bab6a3c623272de04"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-exact-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "040999ecb3d093560b7384f164164c39133736d0ea23b5aa35eb413dc153fe9e"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s0/tentativa-0001/rounds.csv",
+    "sha256": "20edd1fa062816bf23a06ffdfdbb7425ed9db9548964e348fb77472509f93d67"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s0/tentativa-0001/reputation_history.csv",
+    "sha256": "3daf9d66f8f2b6e19ef2f323acee755e0a9c81e88c1f74f7bbcda616c5d13d83"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s0/tentativa-0001/inferencias.jsonl",
+    "sha256": "ff89d3595e87eb1600b02398333a6e63ab4b809177f1ba28ab84ddad59394247"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s1/tentativa-0001/rounds.csv",
+    "sha256": "c5ca469f567f08de7584794e11e18102d3497f847ae0c4f06985a1f8175abe62"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s1/tentativa-0001/reputation_history.csv",
+    "sha256": "906ce58ca32e0dfec5bac90ac3d1edf375f9cfa0ce0c32f7f882cce0d5ae9f49"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s1/tentativa-0001/inferencias.jsonl",
+    "sha256": "eda0981ea945e6db0ecfe39f3e4465c44f762c497e8a5ed7278e6612244a89b4"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s2/tentativa-0001/rounds.csv",
+    "sha256": "6384e207f48a1126521a1211cca50b7dd5aa8462883a15d28cedbb0d71249f5a"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s2/tentativa-0001/reputation_history.csv",
+    "sha256": "67d8ba3cd9092fc917df6269387df5c44e2995a176888b8effd50652daca0b78"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s2/tentativa-0001/inferencias.jsonl",
+    "sha256": "61e935ef3f750fe53c346d03b302824252ad62afd552b973fdf61d0cbc2dc075"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s3/tentativa-0001/rounds.csv",
+    "sha256": "f1fee308fbebb016aaa5f7e1937be9fe103fa233fe01f2ebc6318249c5a90924"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s3/tentativa-0001/reputation_history.csv",
+    "sha256": "9229c2dcc94e15730ae4e0f55a9072721e1d10bbb914aa402ca39c92020af856"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s3/tentativa-0001/inferencias.jsonl",
+    "sha256": "5e4cd5c0f1118e92d39f2fae3ea0b4e6b1cc07657bf2d40eca3080e2fb057fa6"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s4/tentativa-0001/rounds.csv",
+    "sha256": "73334a870edfe697ddae60b5aa496a5386123f82545972516c6a9f9a950b359a"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s4/tentativa-0001/reputation_history.csv",
+    "sha256": "84ab299c4125476e2eae1c79a36020c548a7a4268f4a9d9059e6628cf8d90d00"
+  },
+  {
+    "path": "cenarios/n20-r50-m80-p20-graded-s4/tentativa-0001/inferencias.jsonl",
+    "sha256": "555b51a3b515685befd43f4d3e40816571686a7ebabe3d6b960b76999292aff4"
+  }
+]

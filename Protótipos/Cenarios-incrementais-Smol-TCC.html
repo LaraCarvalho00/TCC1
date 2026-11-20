@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cenários incrementais · banco Smol · TCC</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --muted: #555;
+      --line: #d0d0d0;
+      --paper: #f7f7f5;
+      --card: #fff;
+      --blue: #24629f;
+      --orange: #d26a22;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    header {
+      background: #202632;
+      color: #fff;
+      padding: 28px 20px 22px;
+    }
+    header .wrap, main, nav.toc, footer { max-width: 1100px; margin: 0 auto; }
+    .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin: 0 0 8px; }
+    h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; font-weight: 700; }
+    header p { margin: 0; opacity: .9; font-size: 15px; }
+    nav.toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 16px 20px 0;
+    }
+    nav.toc a {
+      color: var(--blue);
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    nav.toc a:hover { background: #eef4fb; }
+    main { padding: 8px 20px 40px; }
+    .box {
+      background: #fff8e8;
+      border: 1px solid #e0c070;
+      padding: 14px 16px;
+      margin: 18px 0;
+      border-radius: 6px;
+    }
+    h2 {
+      font-size: 22px;
+      margin: 32px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+    }
+    h3 { font-size: 16px; margin: 0 0 8px; }
+    p { margin: 0 0 10px; }
+    .small { font-size: 13px; color: var(--muted); }
+    figure {
+      margin: 12px 0 8px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    figure img { width: 100%; height: auto; display: block; background: #fff; }
+    figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 18px; background: #fff; }
+    th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+    th { background: #efefef; }
+    td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+    footer { padding: 12px 20px 32px; font-size: 12px; color: var(--muted); }
+    @media print {
+      nav.toc { display: none; }
+      header { background: #fff; color: #000; }
+      figure { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <p class="kicker">TCC · Engenharia de Software · PUC Minas</p>
+      <h1>Cenários incrementais no banco Smol</h1>
+      <p>Allan Mateus de Souza Arruda e Lara Andrade Carvalho · 175 execuções · 50 nós · 50 rodadas · 5 sementes</p>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#metodo">Método</a>
+    <a href="#e1">1. Caso base</a>
+    <a href="#e2">2. Maliciosos</a>
+    <a href="#e3">3. Conluio</a>
+    <a href="#e4">4. Reputação</a>
+    <a href="#e5">5. Auditoria</a>
+    <a href="#e6">6. Nota</a>
+    <a href="#e7">7. Instáveis</a>
+    <a href="#e8">Síntese</a>
+    <a href="#e9">Reputação no tempo</a>
+  </nav>
+
+  <main>
+    <div class="box" id="metodo">
+      <p style="margin:0"><strong>O que é esta série.</strong>
+      História pedida pela Isabela: cada etapa muda uma coisa. Honestos sorteiam uma das 20 respostas pré-geradas do SmolLM3-3B no GSM8K; não há inferência nova. Medoide, orquestrador dinâmico, grafo 4-regular, ruído relativo δ = 0,2, EMA simétrica (αc = 0,05, αv = 0,95), <em>sem gênese</em>. Nas etapas 1 a 4 o malicioso coopera nas rodadas 10, 20, 30, 40 e 50. Acurácia nas rodadas sem gabarito. Barras = desvio-padrão amostral das cinco sementes. <strong>Não substitui</strong> as 3.670 execuções nem as figuras do artigo.</p>
+    </div>
+
+    <p class="small">Eixo horizontal: 10, 20, 30 e 40 maliciosos em 50 nós (20%, 40%, 60% e 80%). Arquivos em <code>cenarios-incrementais-smol/</code>.</p>
+
+    <h2 id="e1">Etapa 1 · Caso base</h2>
+    <p>Rede só com honestos, sem reputação ponderada (medoide sem pesos) e sem auditoria. A barra é o teto do banco neste recorte: <strong>86,0% ± 1,4</strong>.</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/01_etapa1_caso_base.png" alt="Etapa 1: caso base com 0% maliciosos" />
+      <figcaption>Figura 1. Acurácia média com 0 maliciosos, cinco sementes.</figcaption>
+    </figure>
+
+    <h2 id="e2">Etapa 2 · Entram os maliciosos</h2>
+    <p>Sem conluio e ainda sem reputação. A queda é lenta até 60% e mais visível em 80% (<strong>64,4% ± 7,0</strong>). Sem coordenação, o medoide ainda encontra os honestos na maior parte das rodadas.</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/02_etapa2_maliciosos.png" alt="Etapa 2: maliciosos sem conluio" />
+      <figcaption>Figura 2. Medoide sem pesos, maliciosos independentes.</figcaption>
+    </figure>
+
+    <h2 id="e3">Etapa 3 · Entra o conluio</h2>
+    <p>Os maliciosos passam a enviar o mesmo valor adulterado. A partir de 30 maliciosos (60%) a acurácia cai para cerca de <strong>9%</strong>: maioria alinhada. Essa é a falha que as etapas seguintes tentam conter.</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/03_etapa3_conluio.png" alt="Etapa 3: efeito do conluio" />
+      <figcaption>Figura 3. Sem conluio versus conluio, ainda sem reputação ponderada.</figcaption>
+    </figure>
+
+    <h2 id="e4">Etapa 4 · Reputação por consenso</h2>
+    <p>A EMA entra, ainda sem auditoria. As curvas com e sem reputação quase coincidem. Sem gabarito, o peso sozinho <strong>não</strong> segura o conluio em maioria (continua ~9% com 30 ou 40 maliciosos).</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/04_etapa4_reputacao.png" alt="Etapa 4: reputação com e sem conluio" />
+      <figcaption>Figura 4. Painel esquerdo sem conluio; direito com conluio.</figcaption>
+    </figure>
+
+    <h2 id="e5">Etapa 5 · Auditoria por sorteio</h2>
+    <p>O gabarito entra em rodadas sorteadas. Com conluio, <strong>p = 0,2</strong> recupera acurácia: 76,6% ± 10,0 com 30 maliciosos e 60,8% ± 9,3 com 40 (contra ~9% sem auditoria). p = 0,1 ajuda menos (58,2% e 37,2% nesses dois pontos).</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/05_etapa5_auditoria.png" alt="Etapa 5: auditoria p=0,1 e p=0,2" />
+      <figcaption>Figura 5. Sem auditoria, p = 0,1 e p = 0,2; nota exata.</figcaption>
+    </figure>
+
+    <h2 id="e6">Etapa 6 · Nota graduada × exata</h2>
+    <p>Conluio e p = 0,2. A nota exata permanece mais alta em 60% e 80% maliciosos (~76,6% e ~60,8%). A graduada cai para <strong>18,9% ± 14,2</strong> e <strong>14,3% ± 5,6</strong>.</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/06_etapa6_nota.png" alt="Etapa 6: nota exata versus graduada" />
+      <figcaption>Figura 6. Mesma auditoria p = 0,2; só muda a nota no gabarito.</figcaption>
+    </figure>
+
+    <h2 id="e7">Etapa 7 · Nós instáveis</h2>
+    <p>20% dos nós instáveis (modo attribute), conluio, p = 0,2, nota exata. A curva fica próxima da etapa 5 sem instáveis (por exemplo 58,2% ± 6,9 com 40 maliciosos, contra 60,8% ± 9,3).</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/07_etapa7_instaveis.png" alt="Etapa 7: 20% de nós instáveis" />
+      <figcaption>Figura 7. 0% versus 20% instáveis, demais fatores iguais à etapa 5 com p = 0,2.</figcaption>
+    </figure>
+
+    <h2 id="e8">Síntese · evolução das defesas</h2>
+    <p>Sem conluio, reputação e auditoria pouco se separam. Com conluio, o salto visível é a auditoria p = 0,2. A reputação sem gabarito não tira a rede do colapso em maioria.</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/08_sintese_evolucao.png" alt="Síntese das etapas 2 a 5" />
+      <figcaption>Figura 8. Sem reputação, reputação e auditoria p = 0,2 no mesmo eixo.</figcaption>
+    </figure>
+
+    <h2 id="e9">Reputação ao longo das rodadas</h2>
+    <p>Etapa 5, conluio, p = 0,2, nota exata. Depois da cooperação inicial, a reputação média dos honestos sobe e a dos maliciosos cai, com 20 e com 40 maliciosos.</p>
+    <figure>
+      <img src="cenarios-incrementais-smol/09_reputacao_etapa5.png" alt="Reputação honesto e malicioso por rodada" />
+      <figcaption>Figura 9. Média das cinco sementes; rodada 0 é o estado inicial.</figcaption>
+    </figure>
+
+    <h2>Números (média ± DP, %)</h2>
+    <p class="small">Acurácia nas rodadas sem gabarito. n = 5 sementes.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Condição</th>
+          <th class="n">20%</th>
+          <th class="n">40%</th>
+          <th class="n">60%</th>
+          <th class="n">80%</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>E2 sem conluio, sem reputação</td><td class="n">85,2 ± 1,8</td><td class="n">82,4 ± 1,7</td><td class="n">79,2 ± 1,8</td><td class="n">64,4 ± 7,0</td></tr>
+        <tr><td>E3 com conluio, sem reputação</td><td class="n">83,6 ± 3,6</td><td class="n">71,2 ± 4,1</td><td class="n">9,2 ± 1,1</td><td class="n">9,2 ± 1,1</td></tr>
+        <tr><td>E4 reputação, com conluio</td><td class="n">85,2 ± 2,7</td><td class="n">70,0 ± 3,2</td><td class="n">9,2 ± 1,1</td><td class="n">9,2 ± 1,1</td></tr>
+        <tr><td>E5 auditoria p = 0,2, com conluio</td><td class="n">87,2 ± 2,6</td><td class="n">82,7 ± 6,1</td><td class="n">76,6 ± 10,0</td><td class="n">60,8 ± 9,3</td></tr>
+        <tr><td>E6 nota graduada, conluio, p = 0,2</td><td class="n">86,2 ± 3,1</td><td class="n">76,0 ± 4,5</td><td class="n">18,9 ± 14,2</td><td class="n">14,3 ± 5,6</td></tr>
+        <tr><td>E7 20% instáveis, conluio, p = 0,2</td><td class="n">86,2 ± 3,9</td><td class="n">84,2 ± 4,4</td><td class="n">74,1 ± 8,6</td><td class="n">58,2 ± 6,9</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Caso base (etapa 1): 86,0 ± 1,4 com 0% maliciosos. Fonte: <code>resultados/incremental/smol-banco-isabela/etapas.csv</code>.</p>
+  </main>
+
+  <footer>
+    PUC Minas · TCC · série incremental no banco Smol · 20 de novembro de 2026.
+    Abra este arquivo a partir da pasta Protótipos para as figuras carregarem.
+  </footer>
+</body>
+</html>

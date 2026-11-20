@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Pontos de melhoria antes de adotar o Qwen como LLM do TCC</title>
+  <style>
+    @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+    body { font-family: "Segoe UI", Calibri, Arial, sans-serif; color: #1a1a1a; font-size: 10.5pt; line-height: 1.42; margin: 0; }
+    h1 { font-size: 16.5pt; margin: 0 0 6pt; }
+    h2 { font-size: 12.5pt; margin: 14pt 0 7pt; border-bottom: 1px solid #ccc; padding-bottom: 2pt; page-break-after: avoid; }
+    h3 { font-size: 11pt; margin: 10pt 0 5pt; page-break-after: avoid; }
+    p { margin: 0 0 7pt; }
+    .kicker { font-size: 9pt; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+    .meta { font-size: 9pt; color: #444; margin-bottom: 10pt; }
+    .box { border: 1px solid #c9c9c9; background: #f6f6f6; padding: 8pt 10pt; margin: 8pt 0 12pt; }
+    .p0 { background: #fdecea; border-color: #e8a0a0; }
+    .p1 { background: #fff8e8; border-color: #e0c070; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.2pt; margin: 6pt 0 11pt; }
+    th, td { border: 1px solid #ccc; padding: 4.5pt 6pt; vertical-align: top; text-align: left; }
+    th { background: #efefef; }
+    .pri { font-weight: 700; white-space: nowrap; }
+    ul { margin: 3pt 0 8pt 16pt; padding: 0; }
+    li { margin-bottom: 3pt; }
+    .small { font-size: 8.8pt; color: #555; }
+    footer { font-size: 8.5pt; color: #666; margin-top: 12pt; }
+  </style>
+</head>
+<body>
+  <p class="kicker">Checklist · TCC PUC Minas</p>
+  <h1>O que arrumar antes de usar o Qwen como LLM do projeto</h1>
+  <p class="meta">Lista priorizada a partir do artigo Smol, da campanha Mac (20 nós, MLX) e da investigação Windows (NF4). Não é lista de treino do modelo do zero: o Qwen3-0.6B já vem pré-treinado. O “dataset” do TCC é de <strong>avaliação</strong> (GSM8K teste), não de treinamento.</p>
+
+  <div class="box p0">
+    <p style="margin:0"><strong>Regra de ouro.</strong> Não substitua Smol por Qwen no texto principal enquanto o honesto acertar ~32–37% no GSM8K e a matriz 50 nós × 5 sementes não existir. O protocolo continua válido; o gerador ainda não está no mesmo patamar experimental do artigo.</p>
+  </div>
+
+  <h2>0. Esclarecimento sobre “dataset de treinamento”</h2>
+  <p>O TCC <strong>não treina</strong> a LLM. O Smol e o Qwen só <em>inferem</em>. O GSM8K usado é o <strong>split de teste</strong> (50 primeiras questões). Isso é correto para avaliação e <strong>errado para fine-tuning</strong>: treinar no teste vaza gabarito.</p>
+  <table>
+    <thead><tr><th>O que existe hoje</th><th>O que falta se Qwen for o gerador oficial</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>banco_smol.json</code>: perguntas GSM8K + gabarito + 20 saídas Smol</td>
+        <td>Separar <em>tarefas</em> (pergunta/gabarito) de <em>banco de respostas do modelo</em></td>
+      </tr>
+      <tr>
+        <td>Artigo sorteia as 1.000 saídas Smol (74%)</td>
+        <td>Se quiserem o mesmo método: gerar <code>banco_qwen.json</code> com 20 amostras Qwen por questão, medir o acerto, e só então simular</td>
+      </tr>
+      <tr>
+        <td>Campanhas Qwen geram na rodada e ignoram as amostras Smol</td>
+        <td>Documentar isso no método; não chamar o arquivo de “dataset de treino do Qwen”</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Se a ideia for <strong>afinar</strong> o Qwen3-0.6B em matemática: usar o <em>train</em> do GSM8K (7.473 itens), nunca as 50 de teste do TCC, e tratar isso como <strong>outra condição experimental</strong> (modelo afinado ≠ Qwen original). Custo, overfitting e tempo provavelmente não cabem antes da banca.</p>
+
+  <h2>P0 — Bloqueia adotar o Qwen como LLM oficial</h2>
+  <table>
+    <thead><tr><th></th><th>Problema</th><th>Por que importa</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="pri">P0.1</td>
+        <td>Acerto bruto baixo (~32% Mac, ~37% Windows) vs 74% do banco Smol</td>
+        <td>O consenso herda o honesto. Com 60–80% de maliciosos o Qwen Mac colapsa (9% e 2%)</td>
+        <td>Fixar um piso (ex.: ≥55–60% nas 50 questões) antes de republicar as tabelas do artigo com Qwen. Sem isso, Qwen fica só como extensão de custo</td>
+      </tr>
+      <tr>
+        <td class="pri">P0.2</td>
+        <td>Não há banco de 1.000 saídas Qwen equivalente ao Smol</td>
+        <td>Artigo e Qwen ao vivo não são o mesmo método; a banca compara 74% com 32% de desenhos diferentes</td>
+        <td>Ou (A) gerar 20 amostras Qwen por questão, mesmo prompt, e simular como no artigo; ou (B) reescrever o método como inferência na rodada e refazer 50 nós × 5 sementes</td>
+      </tr>
+      <tr>
+        <td class="pri">P0.3</td>
+        <td>50 questões de teste, 8 delas com 0% de acerto Qwen no Windows</td>
+        <td>Heterogeneidade extrema: o “dataset de avaliação” é pequeno e alguns itens são impossíveis para o 0,6B</td>
+        <td>Relatar acerto por questão. Considerar filtrar itens com 0/50 ou ampliar para 100+ questões do teste GSM8K — sem treinar nelas</td>
+      </tr>
+      <tr>
+        <td class="pri">P0.4</td>
+        <td>Matriz incompleta na escala do artigo</td>
+        <td>Windows: 2 de 16 cenários, 1 semente. Mac: 20 nós, não 50. Runpod 50×50 ainda é plano</td>
+        <td>Não rotular Qwen como resultado principal até 5 sementes na escala que o texto defender (20 ou 50), com p e notas cruzados</td>
+      </tr>
+      <tr>
+        <td class="pri">P0.5</td>
+        <td>Quantizações e arquiteturas misturadas (MLX 4-bit, NF4, 1 vs 5 modelos, lote vs fila)</td>
+        <td>Qualquer número “do Qwen” hoje mistura modelo + hardware + concorrência</td>
+        <td>Escolher <em>uma</em> configuração canônica (revisão, quantização, workers, 20 ou 50 nós) e repetir nela todas as tabelas</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>P1 — Dataset, prompt e extração (qualidade da resposta honesta)</h2>
+  <table>
+    <thead><tr><th></th><th>Problema</th><th>Evidência</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="pri">P1.1</td>
+        <td>Prompt único, copiado do Smol, em inglês, pede <code>####</code></td>
+        <td>313/2.500 textos Qwen sem <code>####</code>; acerto 8,6% nesses vs 40,6% com marcador</td>
+        <td>Testar prompt no formato do cartão Qwen (few-shot GSM8K ou “put the answer after ####”). Medir aderência e acerto <em>antes</em> da rede. Nova condição, não reescrever dados velhos</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.2</td>
+        <td>top-p 0,95; cartão Qwen non-thinking recomenda 0,8</td>
+        <td>Condição atual é válida, mas não é a recomendada</td>
+        <td>Corrida controlada: mesmas 50 questões, top-p 0,8 vs 0,95, thinking off. Só então fixar o default do projeto</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.3</td>
+        <td>Thinking desativado; 256 tokens; logs sem <code>finish_reason</code></td>
+        <td>Truncamento não é verificável; 291 textos sem <code>####</code> terminam “abruptos”</td>
+        <td>Gravar tokens gerados e motivo de parada. Se muitos batem 256, subir o limite numa condição nova. Thinking on = outro experimento</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.4</td>
+        <td>Parser pega o último número se faltar <code>####</code></td>
+        <td>Não há drift parser vs valor salvo; mas 276 erros têm o gabarito em algum número do texto e o último errado</td>
+        <td>Não “consertar” o parser para inflar acerto. Opcional: métrica extra “gabarito aparece no raciocínio”. Manter a regra GSM8K no resultado oficial</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.5</td>
+        <td>Nome <code>banco_smol.json</code> no Qwen</td>
+        <td>Banca lê “smol” e acha que as respostas são Smol</td>
+        <td>Arquivo de tarefas genérico (<code>tarefas_gsm8k.json</code>) + bancos de amostras por modelo. Atualizar o texto do artigo/método</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.6</td>
+        <td>Gabarito das conferências é o GSM8K oficial, não “o dataset da LLM”</td>
+        <td>Correto para reputação; fácil de confundir com “o Qwen se autoavalia”</td>
+        <td>Deixar explícito: âncora = gabarito humano do GSM8K. A LLM nunca vê y no prompt</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>P1 — Protocolo alinhado ao artigo (não só a LLM)</h2>
+  <table>
+    <thead><tr><th></th><th>Problema</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="pri">P1.7</td>
+        <td>Cinco rodadas honestas ≠ calibração das três primeiras. Qwen Mac não rodou gênese (sinal <code>consensus</code>)</td>
+        <td>Se o texto vender “validação inicial com gabarito”, ligar calibração de forma explícita e dizer que isso <em>muda</em> a série do artigo (sorteio não calibra). Se não vender, não chamar as 5 rodadas de validação do dataset</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.8</td>
+        <td>Defaults AWS/cloud ainda Smol; 1 modelo por nó vs pool de 5</td>
+        <td>Uma decisão: ou 1 LLM por nó (como o artigo sugere em espírito) ou pool declarado. Não misturar nas tabelas finais</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.9</td>
+        <td>Artigo: 50 nós. Qwen Mac: 20. Windows: 50 com 5 GPUs lógicas compartilhadas</td>
+        <td>Fixar N no texto. 20 nós é defesa de custo; 50 é o claim do artigo. Não interpolar</td>
+      </tr>
+      <tr>
+        <td class="pri">P1.10</td>
+        <td>Uma semente no Windows; artigo usa cinco</td>
+        <td>Qualquer tabela Qwen na banca precisa de 5 sementes, como a Tabela 2</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>P2 — Melhorias úteis, não bloqueantes</h2>
+  <ul>
+    <li><strong>P2.1 Few-shot GSM8K</strong> — 2–4 exemplos de treino (não das 50 de teste) no prompt; medir ganho de formato e acerto.</li>
+    <li><strong>P2.2 Modelo um pouco maior</strong> — Qwen3-1.7B ou 4B, se o orçamento permitir, como condição “custo intermediário”, sem apagar o 0,6B.</li>
+    <li><strong>P2.3 Não fine-tunar no teste</strong> — se houver fine-tune, split train/dev; as 50 questões da rede ficam só no teste.</li>
+    <li><strong>P2.4 Registrar perfil de erro</strong> — aritmética, formato, truncamento, último número intermediário; 8 questões com 0% merecem apêndice.</li>
+    <li><strong>P2.5 Comparação controlada Smol×Qwen</strong> — mesma máquina, mesma quantização, mesmos 20 nós, mesmo lote; o PDF de gráficos já aponta o caminho (ambos MLX).</li>
+    <li><strong>P2.6 Texto do TCC</strong> — resumo, 4.1, 6 e 7: Smol permanece referência; Qwen entra como limitação de custo / trabalho futuro realizado.</li>
+    <li><strong>P2.7 Fingerprint</strong> — não mudar parser/prompt/código de inferência em cima de caches interrompidos; nova condição = nova pasta.</li>
+  </ul>
+
+  <h2>Ordem sugerida (antes da banca se Qwen for “o” modelo)</h2>
+  <ol>
+    <li>Separar arquivo de tarefas GSM8K do banco de amostras Smol.</li>
+    <li>Pilotos de prompt + top-p 0,8 nas 50 questões, sem rede, até o acerto bruto subir de forma estável.</li>
+    <li>Decidir método: banco pré-gerado Qwen (espelha o artigo) <em>ou</em> inferência ao vivo (espelha o Mac).</li>
+    <li>Fixar quantização, N nós e 5 sementes; completar a grade nessa identidade só.</li>
+    <li>Reescrever método/limites; não reciclar 74,6%.</li>
+    <li>Só então dizer “o projeto usa Qwen”. Até lá, Smol é o resultado principal e Qwen é extensão.</li>
+  </ol>
+
+  <div class="box p1">
+    <p style="margin:0"><strong>O que não precisa “arrumar” no dataset.</strong> O GSM8K teste com gabarito oficial está correto como âncora de reputação. Não troquem o gabarito pelas respostas do Qwen. Não treinem o 0,6B nas 50 questões da rede. O buraco não é “GSM8K errado”; é gerador fraco, prompt/formato, escala incompleta e método ainda desalinhado do artigo.</p>
+  </div>
+
+  <footer>
+    Fontes: artigo 15 p.; campanha Mac 17/11; investigação Windows 16/11 (313/2.500 sem ####; 8 questões com 0% de acerto); <code>sistema/node/inference.py</code> (prompt, top-p 0,95, thinking off, 256 tokens).
+  </footer>
+</body>
+</html>
