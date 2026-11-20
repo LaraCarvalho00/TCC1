@@ -74,6 +74,19 @@ class LiveSimulationTests(unittest.TestCase):
             self.assertTrue(all(row["resposta_modelo"] == row["resposta_enviada"] for row in first))
             self.assertTrue(all(row["origem_resposta"] == "ruido_compartilhado" for row in second))
 
+    def test_live_unstable_attribute_can_drop_after_generation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.args(directory)
+            args.unstable = 0.5
+            args.unstable_mode = "attribute"
+            args.unstable_p_drop = 1.0
+            run_simulation(args)
+            rows = [json.loads(line) for line in (Path(directory) / "teste" / "inferencias.jsonl").read_text(encoding="utf-8").splitlines()]
+            dropped = [row for row in rows if row["origem_resposta"] == "instavel"]
+            self.assertEqual(len(args.live_model_backend.calls), 8)
+            self.assertEqual(len(dropped), 4)
+            self.assertTrue(all(row["resposta_enviada"] is None for row in dropped))
+
     def test_partial_progress_is_kept_on_model_error(self):
         class Failing(FakeModel):
             def sample(self, *args, **kwargs):

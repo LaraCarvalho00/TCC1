@@ -80,7 +80,17 @@ def _write_live_manifest(path: str, manifest: dict) -> None:
     with open(temporary, "w", encoding="utf-8") as handle:
         json.dump(manifest, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
-    os.replace(temporary, path)
+        handle.flush()
+        os.fsync(handle.fileno())
+    last = None
+    for attempt in range(8):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError as exc:
+            last = exc
+            time.sleep(0.05 * (attempt + 1))
+    raise last
 
 
 def build_profiles(
@@ -116,8 +126,8 @@ def run_simulation(args: argparse.Namespace, *, round_observer=None) -> dict:
     if live_model is not None:
         if getattr(args, "answer_bank", None) is not None or getattr(args, "model_answers", None) is not None:
             raise ValueError("Inferência ao vivo não aceita banco de respostas ou respostas prontas.")
-        if float(args.unstable) != 0:
-            raise ValueError("Inferência ao vivo ainda não suporta nós instáveis.")
+        if float(args.unstable) != 0 and getattr(args, "unstable_mode", "profile") != "attribute":
+            raise ValueError("Inferência ao vivo só admite nós instáveis no modo attribute.")
         if not 0 < float(getattr(args, "model_temperature", 0.7)) or not 0 < float(getattr(args, "model_top_p", 0.95)) <= 1:
             raise ValueError("Temperatura deve ser positiva e top_p deve estar em (0, 1].")
     orchestration = getattr(args, "orchestration", "dynamic")
@@ -292,6 +302,8 @@ def run_simulation(args: argparse.Namespace, *, round_observer=None) -> dict:
                         else:
                             answer, _ = behavior.simulate_answer(behavior.MALICIOUS, expected, bcfg, rng)
                             source = "ataque_fixo"
+                    if node_id in unstable_nodes and unstable_rng.random() < bcfg.unstable_p_drop:
+                        answer, source = None, "instavel"
                     inference_log.write(json.dumps({
                         "rodada": round_index + 1, "no": node_id, "perfil": profiles[node_id],
                         "tarefa": task["id"], "semente": infer_seed, "latencia_ms": latency,
